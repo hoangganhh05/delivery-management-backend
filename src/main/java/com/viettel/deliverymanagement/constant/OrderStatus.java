@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum OrderStatus {
     CREATED("Đơn hàng mới tạo"),
+    PAID("Đã thanh toán"),
     ASSIGNED("Đã phân công shipper"),
     PICKED_UP("Shipper đã lấy hàng"),
     IN_TRANSIT("Đang vận chuyển"),
