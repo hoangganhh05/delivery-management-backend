@@ -1,6 +1,5 @@
 package com.viettel.deliverymanagement.repository;
 
-
 import com.viettel.deliverymanagement.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -15,4 +14,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     boolean existsByUsernameAndIsDeletedFalse(String username);
 
     boolean existsByPhoneNumberAndIsDeletedFalse(String phoneNumber);
+
+    boolean existsByEmailAndIsDeletedFalse(String email);
 }

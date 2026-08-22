@@ -25,7 +25,7 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(
             summary = "Đăng ký tài khoản mới",
-            description = "Tạo tài khoản mới với mật khẩu mã hóa BCrypt và trả về JWT Token"
+            description = "Tạo tài khoản mới với mật khẩu mã hóa BCrypt, kiểm tra trùng lặp và trả về JWT Access Token"
     )
     public ResponseData<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
