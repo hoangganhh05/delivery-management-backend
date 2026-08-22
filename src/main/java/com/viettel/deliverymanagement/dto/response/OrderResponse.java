@@ -1,0 +1,23 @@
+package com.viettel.deliverymanagement.dto.response;
+
+
+import com.viettel.deliverymanagement.constant.OrderStatus;
+import lombok.Builder;
+import lombok.Getter;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Getter
+@Builder
+public class OrderResponse {
+    private Long id;
+    private String trackingNumber;
+    private String senderName;
+    private String senderPhone;
+    private String receiverName;
+    private String receiverPhone;
+    private BigDecimal totalFee;
+    private OrderStatus status;
+    private LocalDateTime createdAt;
+}
