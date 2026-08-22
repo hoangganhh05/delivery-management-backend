@@ -48,7 +48,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // Public endpoints: Auth, Vouchers, Payment, Tracking, OpenAPI/Swagger docs
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/vouchers/**").permitAll()
                         .requestMatchers("/payment/**").permitAll()
