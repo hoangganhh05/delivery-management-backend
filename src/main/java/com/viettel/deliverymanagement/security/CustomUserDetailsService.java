@@ -1,7 +1,6 @@
 package com.viettel.deliverymanagement.security;
 
 import com.viettel.deliverymanagement.entity.UserEntity;
-import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

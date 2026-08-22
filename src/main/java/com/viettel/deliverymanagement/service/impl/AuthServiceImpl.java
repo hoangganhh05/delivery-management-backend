@@ -33,22 +33,18 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse register(RegisterRequest request) {
         log.info("Bắt đầu đăng ký tài khoản cho username: {}", request.getUsername());
 
-        // 1. Kiểm tra username đã tồn tại chưa
         if (userRepository.existsByUsernameAndIsDeletedFalse(request.getUsername())) {
             log.warn("Đăng ký thất bại: Username {} đã tồn tại", request.getUsername());
             throw new AppException("USERNAME_ALREADY_EXISTS", "Tên đăng nhập đã tồn tại trong hệ thống");
         }
 
-        // 2. Kiểm tra số điện thoại đã tồn tại chưa
         if (userRepository.existsByPhoneNumberAndIsDeletedFalse(request.getPhoneNumber())) {
             log.warn("Đăng ký thất bại: Số điện thoại {} đã tồn tại", request.getPhoneNumber());
             throw new AppException("PHONE_ALREADY_EXISTS", "Số điện thoại đã được đăng ký tài khoản khác");
         }
 
-        // 3. Mặc định role là CUSTOMER nếu không truyền
         Role role = request.getRole() != null ? request.getRole() : Role.CUSTOMER;
 
-        // 4. Tạo UserEntity mới với mật khẩu mã hóa BCrypt
         UserEntity newUser = UserEntity.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -62,7 +58,6 @@ public class AuthServiceImpl implements AuthService {
         UserEntity savedUser = userRepository.save(newUser);
         log.info("Đăng ký tài khoản thành công cho user ID: {}", savedUser.getId());
 
-        // 5. Sinh JWT Token
         String token = jwtTokenProvider.generateToken(
                 savedUser.getUsername(),
                 savedUser.getFullName(),
