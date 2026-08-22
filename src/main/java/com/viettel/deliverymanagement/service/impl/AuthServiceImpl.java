@@ -32,10 +32,18 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         String username = request.getUsername().trim();
-        String phoneNumber = request.getPhoneNumber().trim();
-        String email = request.getEmail() != null ? request.getEmail().trim() : null;
+        String fullName = (request.getFullName() != null && !request.getFullName().trim().isEmpty())
+                ? request.getFullName().trim()
+                : username;
+        String email = (request.getEmail() != null && !request.getEmail().trim().isEmpty())
+                ? request.getEmail().trim()
+                : null;
+        String phoneNumber = (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty())
+                ? request.getPhoneNumber().trim()
+                : null;
 
-        log.info("Bắt đầu đăng ký tài khoản cho username: {}, phone: {}, email: {}", username, phoneNumber, email);
+        log.info("Bắt đầu đăng ký tài khoản cho username: {}, fullName: {}, email: {}, phone: {}", 
+                username, fullName, email, phoneNumber);
 
         // 1. Kiểm tra username đã tồn tại chưa
         if (userRepository.existsByUsernameAndIsDeletedFalse(username)) {
@@ -43,14 +51,14 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException("USERNAME_ALREADY_EXISTS", "Tên đăng nhập đã tồn tại trong hệ thống");
         }
 
-        // 2. Kiểm tra email đã tồn tại chưa (nếu có nhập email)
-        if (email != null && !email.isEmpty() && userRepository.existsByEmailAndIsDeletedFalse(email)) {
+        // 2. Kiểm tra email đã tồn tại chưa (nếu client có truyền email)
+        if (email != null && userRepository.existsByEmailAndIsDeletedFalse(email)) {
             log.warn("Đăng ký thất bại: Email '{}' đã được sử dụng", email);
             throw new AppException("EMAIL_ALREADY_EXISTS", "Địa chỉ email đã được sử dụng cho tài khoản khác");
         }
 
-        // 3. Kiểm tra số điện thoại đã tồn tại chưa
-        if (userRepository.existsByPhoneNumberAndIsDeletedFalse(phoneNumber)) {
+        // 3. Kiểm tra số điện thoại đã tồn tại chưa (nếu client có truyền số điện thoại)
+        if (phoneNumber != null && userRepository.existsByPhoneNumberAndIsDeletedFalse(phoneNumber)) {
             log.warn("Đăng ký thất bại: Số điện thoại '{}' đã tồn tại trong hệ thống", phoneNumber);
             throw new AppException("PHONE_ALREADY_EXISTS", "Số điện thoại đã được đăng ký cho tài khoản khác");
         }
@@ -62,7 +70,7 @@ public class AuthServiceImpl implements AuthService {
         UserEntity newUser = UserEntity.builder()
                 .username(username)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName().trim())
+                .fullName(fullName)
                 .email(email)
                 .phoneNumber(phoneNumber)
                 .role(role)
@@ -101,7 +109,7 @@ public class AuthServiceImpl implements AuthService {
             );
         } catch (BadCredentialsException ex) {
             log.warn("Đăng nhập thất bại cho username: '{}'. Sai mật khẩu hoặc tài khoản không đúng", username);
-            throw new AppException("INVALID_CREDENTIALS", "Tên đăng nhập hoặc mật khẩu không chính xác");
+            throw new BadCredentialsException("Mật khẩu hoặc tài khoản không chính xác");
         }
 
         UserEntity user = userRepository.findByUsernameAndIsDeletedFalse(username)

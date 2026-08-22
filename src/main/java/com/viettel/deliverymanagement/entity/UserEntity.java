@@ -27,13 +27,13 @@ public class UserEntity extends BaseEntity {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", length = 100)
     private String fullName;
 
-    @Column(name = "email", unique = true, length = 100)
+    @Column(name = "email", length = 100)
     private String email;
 
-    @Column(name = "phone_number", nullable = false, unique = true, length = 20)
+    @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)

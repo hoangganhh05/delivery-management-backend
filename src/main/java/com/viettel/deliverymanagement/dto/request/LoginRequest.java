@@ -1,5 +1,7 @@
 package com.viettel.deliverymanagement.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -17,9 +19,12 @@ public class LoginRequest {
 
     @Schema(description = "Tên đăng nhập", example = "admin_viettel")
     @NotBlank(message = "Tên đăng nhập không được để trống")
+    @JsonProperty("username")
+    @JsonAlias({"username", "userName", "user_name"})
     private String username;
 
     @Schema(description = "Mật khẩu tài khoản", example = "Admin@123456")
     @NotBlank(message = "Mật khẩu không được để trống")
+    @JsonProperty("password")
     private String password;
 }

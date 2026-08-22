@@ -21,38 +21,48 @@ import lombok.Setter;
 @Builder
 public class RegisterRequest {
 
-    @Schema(description = "Tên đăng nhập (chữ, số, _, @, ., -)", example = "shipper_nam@viettel.vn")
+    @Schema(description = "Tên đăng nhập (chữ, số, _, @, ., -)", example = "shipper_nam")
     @NotBlank(message = "Tên đăng nhập không được để trống")
     @Pattern(
             regexp = "^[a-zA-Z0-9_@.-]{3,50}$",
             message = "Tên đăng nhập phải từ 3 đến 50 ký tự và chỉ chứa chữ, số, dấu gạch dưới (_), @, chấm (.), hoặc gạch ngang (-)"
     )
+    @JsonProperty("username")
+    @JsonAlias({"username", "userName", "user_name"})
     private String username;
 
     @Schema(description = "Mật khẩu tài khoản", example = "Password@123")
     @NotBlank(message = "Mật khẩu không được để trống")
     @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
+    @JsonProperty("password")
     private String password;
 
     @Schema(description = "Họ và tên đầy đủ", example = "Nguyễn Văn Nam")
-    @NotBlank(message = "Họ và tên không được để trống")
+    @JsonProperty("fullName")
+    @JsonAlias({"fullName", "fullname", "full_name", "name"})
     private String fullName;
 
     @Schema(description = "Địa chỉ email", example = "nam.nguyen@viettel.com.vn")
     @Email(message = "Email không đúng định dạng")
+    @JsonProperty("email")
     private String email;
 
     @Schema(description = "Số điện thoại liên hệ", example = "0988123456")
-    @NotBlank(message = "Số điện thoại không được để trống")
-    @Pattern(
-            regexp = "^[0-9+]{9,15}$",
-            message = "Số điện thoại không đúng định dạng (từ 9 đến 15 chữ số)"
-    )
     @JsonProperty("phoneNumber")
-    @JsonAlias({"phone", "phoneNumber"})
+    @JsonAlias({"phone", "phoneNumber", "phone_number"})
     private String phoneNumber;
 
     @Schema(description = "Vai trò người dùng (ADMIN, SHIPPER, CUSTOMER). Mặc định là CUSTOMER", example = "CUSTOMER")
+    @JsonProperty("role")
+    @JsonAlias({"role"})
     @Builder.Default
     private Role role = Role.CUSTOMER;
+
+    public String getPhone() {
+        return this.phoneNumber;
+    }
+
+    public void setPhone(String phone) {
+        this.phoneNumber = phone;
+    }
 }
