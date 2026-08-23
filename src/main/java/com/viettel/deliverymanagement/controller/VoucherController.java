@@ -1,7 +1,9 @@
 package com.viettel.deliverymanagement.controller;
 
 import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
+import com.viettel.deliverymanagement.dto.request.CreateVoucherRequest;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
+import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.service.VoucherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,5 +32,15 @@ public class VoucherController {
     public ResponseData<BigDecimal> calculateDiscount(@Valid @RequestBody ApplyVoucherRequest request) {
         BigDecimal discountAmount = voucherService.calculateDiscount(request);
         return ResponseData.success("Tính tiền giảm giá thành công", discountAmount);
+    }
+
+    @PostMapping("/vouchers")
+    @Operation(
+            summary = "Tạo voucher mới",
+            description = "Tạo voucher mới với các thông tin: mã, phần trăm giảm, giới hạn giảm, giá trị đơn tối thiểu, thời gian hiệu lực"
+    )
+    public ResponseData<VoucherEntity> createVoucher(@Valid @RequestBody CreateVoucherRequest request) {
+        VoucherEntity voucher = voucherService.createVoucher(request);
+        return ResponseData.success("Tạo voucher thành công", voucher);
     }
 }

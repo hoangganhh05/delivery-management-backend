@@ -1,6 +1,7 @@
 package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
+import com.viettel.deliverymanagement.dto.request.CreateVoucherRequest;
 import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.VoucherRepository;
@@ -76,5 +77,31 @@ public class VoucherServiceImpl implements VoucherService {
 
         log.info("Tính toán thành công: Số tiền giảm giá cho voucher {} là {}", voucher.getCode(), discountAmount);
         return discountAmount;
+    }
+
+    @Override
+    @Transactional
+    public VoucherEntity createVoucher(CreateVoucherRequest request) {
+        log.info("Bắt đầu tạo voucher mới với mã: {}", request.getCode());
+
+        // Kiểm tra mã voucher đã tồn tại chưa
+        if (voucherRepository.findByCodeAndIsDeletedFalse(request.getCode()).isPresent()) {
+            log.warn("Mã voucher {} đã tồn tại", request.getCode());
+            throw new AppException("VOUCHER_CODE_EXISTS", "Mã voucher đã tồn tại trong hệ thống");
+        }
+
+        VoucherEntity voucher = VoucherEntity.builder()
+                .code(request.getCode())
+                .discountPercent(request.getDiscountPercent())
+                .maxDiscountAmount(request.getMaxDiscountAmount())
+                .minOrderAmount(request.getMinOrderAmount())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .usageLimit(request.getUsageLimit())
+                .build();
+
+        VoucherEntity savedVoucher = voucherRepository.save(voucher);
+        log.info("Tạo voucher thành công với ID: {}", savedVoucher.getId());
+        return savedVoucher;
     }
 }
