@@ -16,4 +16,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     boolean existsByPhoneNumberAndIsDeletedFalse(String phoneNumber);
 
     boolean existsByEmailAndIsDeletedFalse(String email);
+
+    java.util.List<UserEntity> findByRoleAndIsDeletedFalse(com.viettel.deliverymanagement.constant.Role role);
 }
