@@ -1,7 +1,6 @@
 package com.viettel.deliverymanagement.entity;
 
 import jakarta.persistence.*;
-import lombok.Generated;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -14,24 +13,25 @@ import java.time.LocalDateTime;
 @Setter
 @MappedSuperclass
 public abstract class BaseEntity implements Serializable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @CreationTimestamp
-    @Column(name = "createdAt",updatable = false, nullable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "createBy",length = 50)
-    private String createBy;
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
 
     @UpdateTimestamp
-    @Column(name = "updateAt", updatable = false)
-    private LocalDateTime updateAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @Column(name = "updated_by", length = 50)
     private String updatedBy;
 
     @Column(name = "is_deleted")
-    private Boolean isDeleted = false; // X?a m?m (Soft Delete)
+    private Boolean isDeleted = false; // Soft Delete
 }
