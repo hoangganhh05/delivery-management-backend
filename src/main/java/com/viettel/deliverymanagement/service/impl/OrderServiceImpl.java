@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import com.viettel.deliverymanagement.repository.VoucherRepository;
+import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
+import com.viettel.deliverymanagement.service.VoucherService;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,12 +32,38 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final VoucherRepository voucherRepository;
+    private final VoucherService voucherService;
 
     @Override
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request) {
         // 1. Sinh mã vận đơn tự động (Tracking Number)
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        java.math.BigDecimal shippingFee = request.getShippingFee();
+        java.math.BigDecimal discountFee = java.math.BigDecimal.ZERO;
+        Long voucherId = null;
+
+        // Xử lý áp dụng voucher nếu có
+        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+            String code = request.getVoucherCode().trim().toUpperCase();
+            var voucherOpt = voucherRepository.findByCodeAndIsDeletedFalse(code);
+            if (voucherOpt.isPresent()) {
+                var voucher = voucherOpt.get();
+                voucherId = voucher.getId();
+                try {
+                    discountFee = voucherService.calculateDiscount(new ApplyVoucherRequest(code, shippingFee));
+                } catch (Exception ignored) {
+                    discountFee = java.math.BigDecimal.ZERO;
+                }
+            }
+        }
+
+        java.math.BigDecimal totalFee = shippingFee.subtract(discountFee);
+        if (totalFee.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            totalFee = java.math.BigDecimal.ZERO;
+        }
 
         // 2. Bắt đầu build OrderEntity
         OrderEntity order = OrderEntity.builder()
@@ -46,9 +75,10 @@ public class OrderServiceImpl implements OrderService {
                 .receiverPhone(request.getReceiverPhone())
                 .receiverAddress(request.getReceiverAddress())
                 .weightGram(request.getWeightGram())
-                .shippingFee(request.getShippingFee())
-                .discountFee(java.math.BigDecimal.ZERO)
-                .totalFee(request.getShippingFee())
+                .shippingFee(shippingFee)
+                .discountFee(discountFee)
+                .voucherId(voucherId)
+                .totalFee(totalFee)
                 .codAmount(request.getCodAmount() != null ? request.getCodAmount() : java.math.BigDecimal.ZERO)
                 .status(OrderStatus.CREATED)
                 .build();
