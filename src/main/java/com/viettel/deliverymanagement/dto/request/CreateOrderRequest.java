@@ -42,6 +42,8 @@ public class CreateOrderRequest {
 
     private BigDecimal codAmount;
 
+    private String voucherCode;
+
     @Valid
     private List<OrderItemRequest> items;
 }

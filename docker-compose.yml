@@ -4,16 +4,16 @@ services:
     container_name: delivery_mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-hoang2005}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-delivery_db}
+      MYSQL_USER: ${MYSQL_USER:-delivery_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-hoang2005}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-hoang2005}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,7 +21,7 @@ services:
     networks:
       - delivery_network
 
-  app:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,14 +30,27 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mariadb:3306/${MYSQL_DATABASE}?createDatabaseIfNotExist=true&useSSL=false&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mariadb:3306/${MYSQL_DATABASE:-delivery_db}?createDatabaseIfNotExist=true&useSSL=false&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-delivery_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-hoang2005}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_SERVLET_CONTEXT_PATH: /api/v1
     depends_on:
       mariadb:
         condition: service_healthy
+    networks:
+      - delivery_network
+
+  frontend:
+    build:
+      context: ../delivery-frontend
+      dockerfile: Dockerfile
+    container_name: delivery_frontend
+    restart: always
+    ports:
+      - "${FE_PORT:-5173}:80"
+    depends_on:
+      - backend
     networks:
       - delivery_network
 
@@ -48,3 +61,4 @@ volumes:
 networks:
   delivery_network:
     driver: bridge
+

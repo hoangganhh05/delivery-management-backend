@@ -8,6 +8,7 @@ import com.viettel.deliverymanagement.entity.ShipmentEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.service.NotificationService;
 import com.viettel.deliverymanagement.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     private final OrderRepository orderRepository;
     private final ShipmentRepository shipmentRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -49,6 +51,18 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         shipmentRepository.save(shipment);
         log.info("Phân công shipper thành công cho đơn hàng ID {}", order.getId());
+
+        try {
+            notificationService.createNotification(
+                    request.getShipperId(),
+                    "Đơn hàng mới được gán",
+                    "Bạn đã được phân công giao đơn hàng #" + order.getTrackingNumber() + " đến " + order.getReceiverAddress(),
+                    "SHIPMENT",
+                    order.getId()
+            );
+        } catch (Exception e) {
+            log.warn("Không thể tạo thông báo: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -73,5 +87,19 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         shipmentRepository.save(shipment);
         log.info("Cập nhật trạng thái đơn hàng ID {} thành công", order.getId());
+
+        try {
+            if (order.getSenderId() != null) {
+                notificationService.createNotification(
+                        order.getSenderId(),
+                        "Cập nhật trạng thái đơn hàng #" + order.getTrackingNumber(),
+                        "Đơn hàng của bạn đã chuyển sang trạng thái: " + request.getStatus().name(),
+                        "ORDER",
+                        order.getId()
+                );
+            }
+        } catch (Exception e) {
+            log.warn("Không thể tạo thông báo: {}", e.getMessage());
+        }
     }
 }
