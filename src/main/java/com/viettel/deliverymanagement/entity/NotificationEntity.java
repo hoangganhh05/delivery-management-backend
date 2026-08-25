@@ -1,13 +1,9 @@
 package com.viettel.deliverymanagement.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.io.Serializable;
 
 @Entity
 @Table(name = "notifications")
@@ -16,7 +12,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NotificationEntity extends BaseSoftDeleteEntity {
+public class NotificationEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -28,10 +28,10 @@ public class NotificationEntity extends BaseSoftDeleteEntity {
     private String message;
 
     @Column(name = "type", length = 50)
-    private String type; // ORDER, SHIPMENT, PROMOTION, SYSTEM
+    private String type;
 
     @Column(name = "reference_id")
-    private Long referenceId; // orderId or shipmentId
+    private Long referenceId;
 
     @Builder.Default
     @Column(name = "is_read", nullable = false)
