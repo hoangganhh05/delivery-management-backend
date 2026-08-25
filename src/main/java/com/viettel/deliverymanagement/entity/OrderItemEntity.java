@@ -28,6 +28,9 @@ public class OrderItemEntity {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Column(name = "price", precision = 12, scale = 2)
+    private BigDecimal price;
+
     @Column(name = "weight_gram")
     private Integer weightGram;
 
