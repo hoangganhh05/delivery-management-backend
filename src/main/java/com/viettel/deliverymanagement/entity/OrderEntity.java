@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderEntity extends BaseEntity {
+public class OrderEntity extends BaseSoftDeleteEntity {
 
     @Column(name = "tracking_number", nullable = false, unique = true, length = 50)
     private String trackingNumber;

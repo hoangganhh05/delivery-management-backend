@@ -17,3 +17,4 @@ public abstract class BaseSoftDeleteEntity extends BaseAuditEntity {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false; // Cờ xóa mềm (Soft delete)
 }
+

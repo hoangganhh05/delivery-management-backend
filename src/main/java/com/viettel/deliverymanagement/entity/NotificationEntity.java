@@ -16,7 +16,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NotificationEntity extends BaseEntity {
+public class NotificationEntity extends BaseSoftDeleteEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
