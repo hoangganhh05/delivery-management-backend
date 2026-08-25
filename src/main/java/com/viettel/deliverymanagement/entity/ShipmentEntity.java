@@ -28,7 +28,7 @@ public class ShipmentEntity extends BaseSoftDeleteEntity {
     private Long shipperId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Column(name = "status", nullable = false, length = 30, columnDefinition = "VARCHAR(30)")
     private OrderStatus status;
 
     @Column(name = "note", columnDefinition = "TEXT")

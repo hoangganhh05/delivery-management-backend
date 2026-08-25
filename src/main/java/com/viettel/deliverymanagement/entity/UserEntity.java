@@ -39,7 +39,7 @@ public class UserEntity implements Serializable {
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
+    @Column(name = "role", nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private Role role;
 
     @Column(name = "status", length = 20)
