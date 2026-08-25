@@ -50,7 +50,9 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "https://genuine-ganache-5f9e66.netlify.app",
-                "https://*.netlify.app"
+                "https://*.netlify.app",
+                "https://delivery-management-frontend.vercel.app", // Thêm domain Vercel cụ thể của bạn
+                "https://*.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
