@@ -66,6 +66,7 @@ class OrderServiceImplTest {
                 .shippingFee(request.getShippingFee())
                 .discountFee(BigDecimal.ZERO)
                 .totalFee(request.getShippingFee())
+                .totalPrice(BigDecimal.valueOf(200000))
                 .codAmount(request.getCodAmount())
                 .status(OrderStatus.CREATED)
                 .build();
@@ -86,6 +87,7 @@ class OrderServiceImplTest {
         assertEquals("Tran Thi B", response.getReceiverName());
         assertEquals("0912345678", response.getReceiverPhone());
         assertEquals(BigDecimal.valueOf(35000), response.getTotalFee());
+        assertEquals(BigDecimal.valueOf(200000), response.getTotalPrice());
         assertNotNull(response.getCreatedAt());
 
         verify(orderRepository, times(1)).save(any(OrderEntity.class));
@@ -103,6 +105,7 @@ class OrderServiceImplTest {
                 .receiverName("Pham Van D")
                 .receiverPhone("0988445566")
                 .totalFee(BigDecimal.valueOf(50000))
+                .totalPrice(BigDecimal.valueOf(150000))
                 .status(OrderStatus.IN_TRANSIT)
                 .build();
         mockOrder.setId(10L);
@@ -123,6 +126,7 @@ class OrderServiceImplTest {
         assertEquals("0988445566", response.getReceiverPhone());
         assertEquals(OrderStatus.IN_TRANSIT, response.getStatus());
         assertEquals(BigDecimal.valueOf(50000), response.getTotalFee());
+        assertEquals(BigDecimal.valueOf(150000), response.getTotalPrice());
 
         verify(orderRepository, times(1)).findByTrackingNumber(trackingNumber);
     }

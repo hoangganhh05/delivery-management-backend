@@ -3,6 +3,7 @@ package com.viettel.deliverymanagement.service.impl;
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
+import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
 import com.viettel.deliverymanagement.dto.response.PageResponse;
@@ -68,7 +69,20 @@ public class OrderServiceImpl implements OrderService {
             totalFee = BigDecimal.ZERO;
         }
 
-        // 2. Bắt đầu build OrderEntity (chỉ ánh xạ các trường thực tế có trong bảng orders)
+        // Tính tổng giá trị tiền hàng (totalPrice = tổng số lượng * giá trị khai báo của từng item)
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (OrderItemRequest item : request.getItems()) {
+                if (item.getDeclaredValue() != null && item.getQuantity() != null) {
+                    totalPrice = totalPrice.add(item.getDeclaredValue().multiply(BigDecimal.valueOf(item.getQuantity())));
+                }
+            }
+        }
+        if (totalPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            totalPrice = totalFee != null ? totalFee : BigDecimal.ZERO;
+        }
+
+        // 2. Bắt đầu build OrderEntity
         OrderEntity order = OrderEntity.builder()
                 .trackingNumber(trackingNumber)
                 .senderName(request.getSenderName())
@@ -82,6 +96,7 @@ public class OrderServiceImpl implements OrderService {
                 .discountFee(discountFee)
                 .voucherId(voucherId)
                 .totalFee(totalFee)
+                .totalPrice(totalPrice)
                 .codAmount(request.getCodAmount() != null ? request.getCodAmount() : BigDecimal.ZERO)
                 .status(OrderStatus.CREATED)
                 .build();
@@ -102,17 +117,7 @@ public class OrderServiceImpl implements OrderService {
         OrderEntity savedOrder = orderRepository.save(order);
 
         // 5. Trả về DTO Response
-        return OrderResponse.builder()
-                .id(savedOrder.getId())
-                .trackingNumber(savedOrder.getTrackingNumber())
-                .senderName(savedOrder.getSenderName())
-                .senderPhone(savedOrder.getSenderPhone())
-                .receiverName(savedOrder.getReceiverName())
-                .receiverPhone(savedOrder.getReceiverPhone())
-                .totalFee(savedOrder.getTotalFee())
-                .status(savedOrder.getStatus())
-                .createdAt(LocalDateTime.now())
-                .build();
+        return mapToOrderResponse(savedOrder);
     }
 
     @Override
@@ -125,10 +130,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public PageResponse<OrderResponse> searchOrders(OrderSearchRequest request) {
-        // Cấu hình phân trang & sắp xếp mới nhất lên đầu
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("id").descending());
 
-        // Dynamic Query sử dụng JPA Specification
         Specification<OrderEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -162,7 +165,6 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    // Hàm helper mapper private (Quy định 25: Tách biệt mapper)
     private OrderResponse mapToOrderResponse(OrderEntity order) {
         return OrderResponse.builder()
                 .id(order.getId())
@@ -171,7 +173,11 @@ public class OrderServiceImpl implements OrderService {
                 .senderPhone(order.getSenderPhone())
                 .receiverName(order.getReceiverName())
                 .receiverPhone(order.getReceiverPhone())
+                .shippingFee(order.getShippingFee())
+                .discountFee(order.getDiscountFee())
                 .totalFee(order.getTotalFee())
+                .totalPrice(order.getTotalPrice() != null ? order.getTotalPrice() : order.getTotalFee())
+                .codAmount(order.getCodAmount())
                 .status(order.getStatus())
                 .createdAt(LocalDateTime.now())
                 .build();
