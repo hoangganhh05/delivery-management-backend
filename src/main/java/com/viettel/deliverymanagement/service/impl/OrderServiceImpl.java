@@ -1,7 +1,6 @@
 package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
-import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
@@ -13,7 +12,6 @@ import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.VoucherRepository;
 import com.viettel.deliverymanagement.service.OrderService;
-import com.viettel.deliverymanagement.service.VoucherService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +36,6 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final VoucherRepository voucherRepository;
-    private final VoucherService voucherService;
 
     @Override
     @Transactional
@@ -49,26 +47,6 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal discountFee = BigDecimal.ZERO;
         Long voucherId = null;
 
-        // Xử lý áp dụng voucher nếu có
-        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            String code = request.getVoucherCode().trim().toUpperCase();
-            var voucherOpt = voucherRepository.findByCode(code);
-            if (voucherOpt.isPresent()) {
-                var voucher = voucherOpt.get();
-                voucherId = voucher.getId();
-                try {
-                    discountFee = voucherService.calculateDiscount(new ApplyVoucherRequest(code, shippingFee));
-                } catch (Exception ignored) {
-                    discountFee = BigDecimal.ZERO;
-                }
-            }
-        }
-
-        BigDecimal totalFee = shippingFee.subtract(discountFee);
-        if (totalFee.compareTo(BigDecimal.ZERO) < 0) {
-            totalFee = BigDecimal.ZERO;
-        }
-
         // Tính tổng giá trị tiền hàng (totalPrice = tổng số lượng * giá trị khai báo của từng item)
         BigDecimal totalPrice = BigDecimal.ZERO;
         if (request.getItems() != null && !request.getItems().isEmpty()) {
@@ -79,7 +57,53 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         if (totalPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            totalPrice = totalFee != null ? totalFee : BigDecimal.ZERO;
+            totalPrice = shippingFee != null ? shippingFee : BigDecimal.ZERO;
+        }
+
+        // Xử lý áp dụng voucher an toàn không gây rollback transaction
+        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+            String code = request.getVoucherCode().trim().toUpperCase();
+            var voucherOpt = voucherRepository.findByCode(code);
+            if (voucherOpt.isPresent()) {
+                var voucher = voucherOpt.get();
+                LocalDateTime now = LocalDateTime.now();
+                boolean valid = true;
+
+                if (voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) {
+                    valid = false;
+                }
+                if (voucher.getEndDate() != null && now.isAfter(voucher.getEndDate())) {
+                    valid = false;
+                }
+                if (voucher.getUsageLimit() != null && voucher.getUsageLimit() <= 0) {
+                    valid = false;
+                }
+
+                // Kiểm tra đơn tối thiểu so với tiền hàng (hoặc cước vận chuyển)
+                BigDecimal baseAmountForVoucher = totalPrice.compareTo(BigDecimal.ZERO) > 0 ? totalPrice : shippingFee;
+                if (voucher.getMinOrderAmount() != null && baseAmountForVoucher.compareTo(voucher.getMinOrderAmount()) < 0) {
+                    valid = false;
+                }
+
+                if (valid) {
+                    voucherId = voucher.getId();
+                    if (voucher.getDiscountPercent() != null && voucher.getDiscountPercent() > 0) {
+                        discountFee = shippingFee.multiply(BigDecimal.valueOf(voucher.getDiscountPercent()))
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    }
+                    if (voucher.getMaxDiscountAmount() != null && discountFee.compareTo(voucher.getMaxDiscountAmount()) > 0) {
+                        discountFee = voucher.getMaxDiscountAmount();
+                    }
+                    if (discountFee.compareTo(shippingFee) > 0) {
+                        discountFee = shippingFee;
+                    }
+                }
+            }
+        }
+
+        BigDecimal totalFee = shippingFee.subtract(discountFee);
+        if (totalFee.compareTo(BigDecimal.ZERO) < 0) {
+            totalFee = BigDecimal.ZERO;
         }
 
         // 2. Bắt đầu build OrderEntity
@@ -101,7 +125,7 @@ public class OrderServiceImpl implements OrderService {
                 .status(OrderStatus.CREATED)
                 .build();
 
-        // 3. Mapping danh sách OrderItems
+        // 3. Mapping danh sách OrderItems (gồm cả price và declaredValue)
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             var items = request.getItems().stream().map(itemReq -> OrderItemEntity.builder()
                     .order(order)

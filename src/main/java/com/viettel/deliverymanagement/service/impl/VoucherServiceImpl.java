@@ -23,7 +23,6 @@ public class VoucherServiceImpl implements VoucherService {
     private final VoucherRepository voucherRepository;
 
     @Override
-    @Transactional(readOnly = true)
     public BigDecimal calculateDiscount(ApplyVoucherRequest request) {
         log.info("Bắt đầu tính toán giảm giá cho mã voucher: {} với giá trị đơn hàng: {}", 
                 request.getVoucherCode(), request.getOrderAmount());
