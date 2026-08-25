@@ -28,7 +28,7 @@ public class VoucherServiceImpl implements VoucherService {
         log.info("Bắt đầu tính toán giảm giá cho mã voucher: {} với giá trị đơn hàng: {}", 
                 request.getVoucherCode(), request.getOrderAmount());
 
-        VoucherEntity voucher = voucherRepository.findByCodeAndIsDeletedFalse(request.getVoucherCode())
+        VoucherEntity voucher = voucherRepository.findByCode(request.getVoucherCode())
                 .orElseThrow(() -> new AppException("VOUCHER_NOT_FOUND", "Mã voucher không tồn tại hoặc đã bị vô hiệu hóa"));
 
         LocalDateTime now = LocalDateTime.now();
@@ -85,7 +85,7 @@ public class VoucherServiceImpl implements VoucherService {
         log.info("Bắt đầu tạo voucher mới với mã: {}", request.getCode());
 
         // Kiểm tra mã voucher đã tồn tại chưa
-        if (voucherRepository.findByCodeAndIsDeletedFalse(request.getCode()).isPresent()) {
+        if (voucherRepository.findByCode(request.getCode()).isPresent()) {
             log.warn("Mã voucher {} đã tồn tại", request.getCode());
             throw new AppException("VOUCHER_CODE_EXISTS", "Mã voucher đã tồn tại trong hệ thống");
         }
