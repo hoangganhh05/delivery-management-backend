@@ -60,7 +60,7 @@ public class OrderEntity extends BaseSoftDeleteEntity {
     private BigDecimal codAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
+    @Column(name = "status", length = 30, columnDefinition = "VARCHAR(30)")
     private OrderStatus status;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
