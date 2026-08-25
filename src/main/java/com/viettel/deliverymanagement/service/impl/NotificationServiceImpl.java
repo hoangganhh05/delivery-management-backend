@@ -9,6 +9,7 @@ import com.viettel.deliverymanagement.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -63,7 +64,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationEntity createNotification(Long userId, String title, String message, String type, Long refId) {
         NotificationEntity notification = NotificationEntity.builder()
                 .userId(userId)
