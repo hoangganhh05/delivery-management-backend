@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface ShipmentRepository extends JpaRepository<ShipmentEntity, Long> {
 
-    List<ShipmentEntity> findByOrderIdOrderByCreatedAtDesc(Long orderId);
+    List<ShipmentEntity> findByOrderIdOrderByIdDesc(Long orderId);
 }

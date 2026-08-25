@@ -1,10 +1,10 @@
 package com.viettel.deliverymanagement.entity;
 
-
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -15,7 +15,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderEntity extends BaseSoftDeleteEntity {
+public class OrderEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "tracking_number", nullable = false, unique = true, length = 50)
     private String trackingNumber;

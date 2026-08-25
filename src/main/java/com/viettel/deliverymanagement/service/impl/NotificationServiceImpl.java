@@ -27,7 +27,7 @@ public class NotificationServiceImpl implements NotificationService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
-        return notificationRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId());
+        return notificationRepository.findByUserIdOrderByIdDesc(user.getId());
     }
 
     @Override
@@ -36,7 +36,7 @@ public class NotificationServiceImpl implements NotificationService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
-        return notificationRepository.countByUserIdAndIsReadFalseAndIsDeletedFalse(user.getId());
+        return notificationRepository.countByUserIdAndIsReadFalse(user.getId());
     }
 
     @Override
@@ -55,7 +55,7 @@ public class NotificationServiceImpl implements NotificationService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
-        List<NotificationEntity> notifications = notificationRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId());
+        List<NotificationEntity> notifications = notificationRepository.findByUserIdOrderByIdDesc(user.getId());
         for (NotificationEntity n : notifications) {
             n.setIsRead(true);
         }

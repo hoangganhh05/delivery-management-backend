@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,17 +30,17 @@ public class TrackingServiceImpl implements TrackingService {
     public TrackingResponse trackOrder(String trackingNumber) {
         log.info("Tra cứu hành trình đơn hàng với mã vận đơn: {}", trackingNumber);
 
-        OrderEntity order = orderRepository.findByTrackingNumberAndIsDeletedFalse(trackingNumber)
+        OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
-        List<ShipmentEntity> shipments = shipmentRepository.findByOrderIdOrderByCreatedAtDesc(order.getId());
+        List<ShipmentEntity> shipments = shipmentRepository.findByOrderIdOrderByIdDesc(order.getId());
 
         List<ShipmentHistoryDto> historyList = shipments.stream()
                 .map(shipment -> ShipmentHistoryDto.builder()
                         .status(shipment.getStatus())
                         .note(shipment.getNote())
                         .proofImageUrl(shipment.getProofImageUrl())
-                        .timestamp(shipment.getCreatedAt())
+                        .timestamp(LocalDateTime.now())
                         .build())
                 .collect(Collectors.toList());
 

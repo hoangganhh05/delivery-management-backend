@@ -14,12 +14,10 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSpecificationExecutor<OrderEntity> {
 
-    Optional<OrderEntity> findByTrackingNumberAndIsDeletedFalse(String trackingNumber);
+    Optional<OrderEntity> findByTrackingNumber(String trackingNumber);
 
-    long countByIsDeletedFalse();
+    long countByStatus(OrderStatus status);
 
-    long countByStatusAndIsDeletedFalse(OrderStatus status);
-
-    @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status = :status AND o.isDeleted = false")
+    @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status = :status")
     BigDecimal sumTotalFeeByStatus(@Param("status") OrderStatus status);
 }

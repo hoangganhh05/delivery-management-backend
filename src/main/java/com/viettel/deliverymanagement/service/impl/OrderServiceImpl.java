@@ -1,5 +1,7 @@
 package com.viettel.deliverymanagement.service.impl;
+
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
@@ -8,7 +10,9 @@ import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.OrderItemEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
+import com.viettel.deliverymanagement.repository.VoucherRepository;
 import com.viettel.deliverymanagement.service.OrderService;
+import com.viettel.deliverymanagement.service.VoucherService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,12 +23,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import com.viettel.deliverymanagement.repository.VoucherRepository;
-import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
-import com.viettel.deliverymanagement.service.VoucherService;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,31 +44,31 @@ public class OrderServiceImpl implements OrderService {
         // 1. Sinh mã vận đơn tự động (Tracking Number)
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        java.math.BigDecimal shippingFee = request.getShippingFee();
-        java.math.BigDecimal discountFee = java.math.BigDecimal.ZERO;
+        BigDecimal shippingFee = request.getShippingFee();
+        BigDecimal discountFee = BigDecimal.ZERO;
         Long voucherId = null;
 
         // Xử lý áp dụng voucher nếu có
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
             String code = request.getVoucherCode().trim().toUpperCase();
-            var voucherOpt = voucherRepository.findByCodeAndIsDeletedFalse(code);
+            var voucherOpt = voucherRepository.findByCode(code);
             if (voucherOpt.isPresent()) {
                 var voucher = voucherOpt.get();
                 voucherId = voucher.getId();
                 try {
                     discountFee = voucherService.calculateDiscount(new ApplyVoucherRequest(code, shippingFee));
                 } catch (Exception ignored) {
-                    discountFee = java.math.BigDecimal.ZERO;
+                    discountFee = BigDecimal.ZERO;
                 }
             }
         }
 
-        java.math.BigDecimal totalFee = shippingFee.subtract(discountFee);
-        if (totalFee.compareTo(java.math.BigDecimal.ZERO) < 0) {
-            totalFee = java.math.BigDecimal.ZERO;
+        BigDecimal totalFee = shippingFee.subtract(discountFee);
+        if (totalFee.compareTo(BigDecimal.ZERO) < 0) {
+            totalFee = BigDecimal.ZERO;
         }
 
-        // 2. Bắt đầu build OrderEntity
+        // 2. Bắt đầu build OrderEntity (chỉ ánh xạ các trường thực tế có trong bảng orders)
         OrderEntity order = OrderEntity.builder()
                 .trackingNumber(trackingNumber)
                 .senderName(request.getSenderName())
@@ -79,7 +82,7 @@ public class OrderServiceImpl implements OrderService {
                 .discountFee(discountFee)
                 .voucherId(voucherId)
                 .totalFee(totalFee)
-                .codAmount(request.getCodAmount() != null ? request.getCodAmount() : java.math.BigDecimal.ZERO)
+                .codAmount(request.getCodAmount() != null ? request.getCodAmount() : BigDecimal.ZERO)
                 .status(OrderStatus.CREATED)
                 .build();
 
@@ -108,13 +111,13 @@ public class OrderServiceImpl implements OrderService {
                 .receiverPhone(savedOrder.getReceiverPhone())
                 .totalFee(savedOrder.getTotalFee())
                 .status(savedOrder.getStatus())
-                .createdAt(savedOrder.getCreatedAt())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 
     @Override
     public OrderResponse getOrderByTrackingNumber(String trackingNumber) {
-        OrderEntity order = orderRepository.findByTrackingNumberAndIsDeletedFalse(trackingNumber)
+        OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
         return mapToOrderResponse(order);
@@ -128,7 +131,6 @@ public class OrderServiceImpl implements OrderService {
         // Dynamic Query sử dụng JPA Specification
         Specification<OrderEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("isDeleted"), false));
 
             if (request.getStatus() != null) {
                 predicates.add(cb.equal(root.get("status"), request.getStatus()));
@@ -171,7 +173,7 @@ public class OrderServiceImpl implements OrderService {
                 .receiverPhone(order.getReceiverPhone())
                 .totalFee(order.getTotalFee())
                 .status(order.getStatus())
-                .createdAt(order.getCreatedAt())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 }

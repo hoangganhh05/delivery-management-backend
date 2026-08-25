@@ -1,16 +1,10 @@
 package com.viettel.deliverymanagement.entity;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.io.Serializable;
 
 @Entity
 @Table(name = "shipments")
@@ -19,7 +13,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ShipmentEntity extends BaseSoftDeleteEntity {
+public class ShipmentEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
