@@ -1,6 +1,5 @@
 package com.viettel.deliverymanagement.dto.response;
 
-
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +16,11 @@ public class OrderResponse {
     private String senderPhone;
     private String receiverName;
     private String receiverPhone;
+    private BigDecimal shippingFee;
+    private BigDecimal discountFee;
     private BigDecimal totalFee;
+    private BigDecimal totalPrice;
+    private BigDecimal codAmount;
     private OrderStatus status;
     private LocalDateTime createdAt;
 }

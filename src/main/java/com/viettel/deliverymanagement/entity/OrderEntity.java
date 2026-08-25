@@ -60,6 +60,9 @@ public class OrderEntity implements Serializable {
     @Column(name = "total_fee", precision = 12, scale = 2)
     private BigDecimal totalFee;
 
+    @Column(name = "total_price", precision = 15, scale = 2)
+    private BigDecimal totalPrice;
+
     @Column(name = "cod_amount", precision = 12, scale = 2)
     private BigDecimal codAmount;
 
