@@ -36,3 +36,4 @@ public abstract class BaseAuditEntity implements Serializable {
     @Column(name = "updated_by", length = 50)
     private String updatedBy;
 }
+

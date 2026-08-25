@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VoucherEntity extends BaseEntity {
+public class VoucherEntity extends BaseSoftDeleteEntity {
 
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;

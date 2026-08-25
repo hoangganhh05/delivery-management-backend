@@ -19,7 +19,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ShipmentEntity extends BaseEntity {
+public class ShipmentEntity extends BaseSoftDeleteEntity {
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
