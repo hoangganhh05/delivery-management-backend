@@ -4,8 +4,11 @@ import com.viettel.deliverymanagement.constant.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
+
 /**
- * UserEntity: Kế thừa BaseAuditEntity (chỉ gồm id và audit timestamps, không có cờ is_deleted)
+ * UserEntity: Ánh xạ chuẩn theo schema bảng users thực tế trong Database.
+ * Không chứa các trường audit (created_at, updated_at, is_deleted) để tránh lỗi thiếu cột.
  */
 @Entity
 @Table(name = "users")
@@ -14,7 +17,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserEntity extends BaseAuditEntity {
+public class UserEntity implements Serializable {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "username", length = 50, nullable = false, unique = true)
     private String username;
