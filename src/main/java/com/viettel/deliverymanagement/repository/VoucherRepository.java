@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface VoucherRepository extends JpaRepository<VoucherEntity, Long> {
 
-    Optional<VoucherEntity> findByCodeAndIsDeletedFalse(String code);
+    Optional<VoucherEntity> findByCode(String code);
 }
