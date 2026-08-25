@@ -46,19 +46,19 @@ public class AuthServiceImpl implements AuthService {
                 username, fullName, email, phoneNumber);
 
         // 1. Kiểm tra username đã tồn tại chưa
-        if (userRepository.existsByUsernameAndIsDeletedFalse(username)) {
+        if (userRepository.existsByUsername(username)) {
             log.warn("Đăng ký thất bại: Username '{}' đã tồn tại trong hệ thống", username);
             throw new AppException("USERNAME_ALREADY_EXISTS", "Tên đăng nhập đã tồn tại trong hệ thống");
         }
 
         // 2. Kiểm tra email đã tồn tại chưa (nếu client có truyền email)
-        if (email != null && userRepository.existsByEmailAndIsDeletedFalse(email)) {
+        if (email != null && userRepository.existsByEmail(email)) {
             log.warn("Đăng ký thất bại: Email '{}' đã được sử dụng", email);
             throw new AppException("EMAIL_ALREADY_EXISTS", "Địa chỉ email đã được sử dụng cho tài khoản khác");
         }
 
         // 3. Kiểm tra số điện thoại đã tồn tại chưa (nếu client có truyền số điện thoại)
-        if (phoneNumber != null && userRepository.existsByPhoneNumberAndIsDeletedFalse(phoneNumber)) {
+        if (phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)) {
             log.warn("Đăng ký thất bại: Số điện thoại '{}' đã tồn tại trong hệ thống", phoneNumber);
             throw new AppException("PHONE_ALREADY_EXISTS", "Số điện thoại đã được đăng ký cho tài khoản khác");
         }
@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadCredentialsException("Mật khẩu hoặc tài khoản không chính xác");
         }
 
-        UserEntity user = userRepository.findByUsernameAndIsDeletedFalse(username)
+        UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin tài khoản"));
 
         if ("BLOCKED".equalsIgnoreCase(user.getStatus())) {

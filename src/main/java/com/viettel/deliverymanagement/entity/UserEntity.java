@@ -1,17 +1,12 @@
 package com.viettel.deliverymanagement.entity;
 
 import com.viettel.deliverymanagement.constant.Role;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
+/**
+ * UserEntity: Kế thừa BaseAuditEntity (chỉ gồm id và audit timestamps, không có cờ is_deleted)
+ */
 @Entity
 @Table(name = "users")
 @Getter
@@ -19,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserEntity extends BaseEntity {
+public class UserEntity extends BaseAuditEntity {
 
     @Column(name = "username", length = 50, nullable = false, unique = true)
     private String username;

@@ -24,7 +24,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public List<NotificationEntity> getMyNotifications(String username) {
-        UserEntity user = userRepository.findByUsernameAndIsDeletedFalse(username)
+        UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
         return notificationRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId());
@@ -33,7 +33,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public long getUnreadCount(String username) {
-        UserEntity user = userRepository.findByUsernameAndIsDeletedFalse(username)
+        UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
         return notificationRepository.countByUserIdAndIsReadFalseAndIsDeletedFalse(user.getId());
@@ -52,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAllAsRead(String username) {
-        UserEntity user = userRepository.findByUsernameAndIsDeletedFalse(username)
+        UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
 
         List<NotificationEntity> notifications = notificationRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId());

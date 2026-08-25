@@ -1,21 +1,23 @@
 package com.viettel.deliverymanagement.repository;
 
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
-    Optional<UserEntity> findByUsernameAndIsDeletedFalse(String username);
+    Optional<UserEntity> findByUsername(String username);
 
-    boolean existsByUsernameAndIsDeletedFalse(String username);
+    boolean existsByUsername(String username);
 
-    boolean existsByPhoneNumberAndIsDeletedFalse(String phoneNumber);
+    boolean existsByPhoneNumber(String phoneNumber);
 
-    boolean existsByEmailAndIsDeletedFalse(String email);
+    boolean existsByEmail(String email);
 
-    java.util.List<UserEntity> findByRoleAndIsDeletedFalse(com.viettel.deliverymanagement.constant.Role role);
+    List<UserEntity> findByRole(Role role);
 }

@@ -28,7 +28,7 @@ public class ShipperController {
     @GetMapping
     @Operation(summary = "Lấy danh sách tất cả nhân viên giao hàng (Shipper)")
     public ResponseData<List<ShipperDto>> getAllShippers() {
-        List<UserEntity> shippers = userRepository.findByRoleAndIsDeletedFalse(Role.SHIPPER);
+        List<UserEntity> shippers = userRepository.findByRole(Role.SHIPPER);
         List<ShipperDto> dtoList = shippers.stream().map(s -> ShipperDto.builder()
                 .id(s.getId())
                 .username(s.getUsername())
