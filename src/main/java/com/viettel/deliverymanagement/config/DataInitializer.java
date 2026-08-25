@@ -8,6 +8,7 @@ import com.viettel.deliverymanagement.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -22,11 +23,35 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final VoucherRepository voucherRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) {
+        autoMigrateDatabaseSchema();
         seedUsers();
         seedVouchers();
+    }
+
+    /**
+     * Tự động chạy các lệnh ALTER TABLE an toàn để đảm bảo mọi bảng trong DB đều đủ cột audit
+     * mà không cần người dùng phải mở SQL Console bên ngoài.
+     */
+    private void autoMigrateDatabaseSchema() {
+        String[] tables = {"vouchers", "orders", "shipments", "notifications", "users"};
+        for (String table : tables) {
+            try {
+                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP");
+                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS created_by VARCHAR(50) NULL");
+                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS updated_by VARCHAR(50) NULL");
+                if (!"users".equals(table)) {
+                    jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) DEFAULT 0");
+                }
+            } catch (Exception e) {
+                log.debug("Auto migration note for table {}: {}", table, e.getMessage());
+            }
+        }
+        log.info("Tự động kiểm tra và đồng bộ cấu trúc cột Database thành công!");
     }
 
     private void seedUsers() {
