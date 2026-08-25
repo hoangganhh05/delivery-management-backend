@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,7 +70,6 @@ class OrderServiceImplTest {
                 .status(OrderStatus.CREATED)
                 .build();
         savedOrder.setId(1L);
-        savedOrder.setCreatedAt(LocalDateTime.now());
 
         when(orderRepository.save(any(OrderEntity.class))).thenReturn(savedOrder);
 
@@ -108,9 +106,8 @@ class OrderServiceImplTest {
                 .status(OrderStatus.IN_TRANSIT)
                 .build();
         mockOrder.setId(10L);
-        mockOrder.setCreatedAt(LocalDateTime.now());
 
-        when(orderRepository.findByTrackingNumberAndIsDeletedFalse(trackingNumber))
+        when(orderRepository.findByTrackingNumber(trackingNumber))
                 .thenReturn(Optional.of(mockOrder));
 
         // Act
@@ -127,7 +124,7 @@ class OrderServiceImplTest {
         assertEquals(OrderStatus.IN_TRANSIT, response.getStatus());
         assertEquals(BigDecimal.valueOf(50000), response.getTotalFee());
 
-        verify(orderRepository, times(1)).findByTrackingNumberAndIsDeletedFalse(trackingNumber);
+        verify(orderRepository, times(1)).findByTrackingNumber(trackingNumber);
     }
 
     @Test
@@ -135,7 +132,7 @@ class OrderServiceImplTest {
     void getOrderByTrackingNumber_NotFound_ThrowsException() {
         // Arrange
         String nonExistentTrackingNumber = "VT00000000";
-        when(orderRepository.findByTrackingNumberAndIsDeletedFalse(nonExistentTrackingNumber))
+        when(orderRepository.findByTrackingNumber(nonExistentTrackingNumber))
                 .thenReturn(Optional.empty());
 
         // Act & Assert
@@ -146,6 +143,6 @@ class OrderServiceImplTest {
         assertEquals("ORDER_NOT_FOUND", exception.getCode());
         assertTrue(exception.getMessage().contains(nonExistentTrackingNumber));
 
-        verify(orderRepository, times(1)).findByTrackingNumberAndIsDeletedFalse(nonExistentTrackingNumber);
+        verify(orderRepository, times(1)).findByTrackingNumber(nonExistentTrackingNumber);
     }
 }
