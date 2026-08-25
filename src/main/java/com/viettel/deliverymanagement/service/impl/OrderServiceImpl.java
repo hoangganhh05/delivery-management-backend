@@ -108,7 +108,8 @@ public class OrderServiceImpl implements OrderService {
                     .itemName(itemReq.getItemName())
                     .quantity(itemReq.getQuantity())
                     .weightGram(itemReq.getWeightGram())
-                    .declaredValue(itemReq.getDeclaredValue())
+                    .price(itemReq.getDeclaredValue() != null ? itemReq.getDeclaredValue() : BigDecimal.ZERO)
+                    .declaredValue(itemReq.getDeclaredValue() != null ? itemReq.getDeclaredValue() : BigDecimal.ZERO)
                     .build()).collect(Collectors.toList());
             order.setItems(items);
         }
