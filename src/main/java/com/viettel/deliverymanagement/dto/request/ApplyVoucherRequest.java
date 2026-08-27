@@ -27,4 +27,8 @@ public class ApplyVoucherRequest {
     @NotNull(message = "Giá trị đơn hàng không được để trống")
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá trị đơn hàng phải lớn hơn 0")
     private BigDecimal orderAmount;
+
+    @Schema(description = "Phí vận chuyển dùng làm cơ sở tính giảm", example = "30000")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Phí vận chuyển phải lớn hơn 0")
+    private BigDecimal shippingFee;
 }

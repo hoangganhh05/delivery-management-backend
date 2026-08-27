@@ -57,9 +57,12 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         // 5. Tính số tiền giảm giá theo %
+        BigDecimal discountBase = request.getShippingFee() != null
+                ? request.getShippingFee()
+                : request.getOrderAmount();
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (voucher.getDiscountPercent() != null && voucher.getDiscountPercent() > 0) {
-            discountAmount = request.getOrderAmount()
+            discountAmount = discountBase
                     .multiply(BigDecimal.valueOf(voucher.getDiscountPercent()))
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         }
@@ -70,8 +73,8 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         // 7. Đảm bảo số tiền giảm giá không vượt quá tổng giá trị đơn hàng
-        if (discountAmount.compareTo(request.getOrderAmount()) > 0) {
-            discountAmount = request.getOrderAmount();
+        if (discountAmount.compareTo(discountBase) > 0) {
+            discountAmount = discountBase;
         }
 
         log.info("Tính toán thành công: Số tiền giảm giá cho voucher {} là {}", voucher.getCode(), discountAmount);
