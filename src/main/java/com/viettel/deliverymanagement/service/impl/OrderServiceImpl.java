@@ -190,6 +190,24 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public OrderResponse cancelOrder(String trackingNumber) {
+        OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
+
+        if (order.getStatus() == OrderStatus.DELIVERED
+                || order.getStatus() == OrderStatus.DONE
+                || order.getStatus() == OrderStatus.COMPLETED) {
+            throw new AppException("ORDER_CANNOT_CANCEL", "Không thể hủy đơn hàng đã hoàn thành");
+        }
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            order.setStatus(OrderStatus.CANCELLED);
+            order = orderRepository.save(order);
+        }
+        return mapToOrderResponse(order);
+    }
+
     private OrderResponse mapToOrderResponse(OrderEntity order) {
         return OrderResponse.builder()
                 .id(order.getId())
@@ -206,7 +224,7 @@ public class OrderServiceImpl implements OrderService {
                 .totalPrice(order.getTotalPrice() != null ? order.getTotalPrice() : order.getTotalFee())
                 .codAmount(order.getCodAmount())
                 .status(order.getStatus())
-                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 }

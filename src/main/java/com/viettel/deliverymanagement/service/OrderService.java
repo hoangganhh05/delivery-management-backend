@@ -11,4 +11,6 @@ public interface OrderService {
     OrderResponse getOrderByTrackingNumber(String trackingNumber);
 
     PageResponse<OrderResponse> searchOrders(OrderSearchRequest request);
+
+    OrderResponse cancelOrder(String trackingNumber);
 }

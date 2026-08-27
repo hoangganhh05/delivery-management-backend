@@ -35,4 +35,9 @@ public class OrderController {
                 orderService.getOrderByTrackingNumber(trackingNumber)
         );
     }
+
+    @PutMapping("/{trackingNumber}/cancel")
+    public ResponseData<OrderResponse> cancelOrder(@PathVariable String trackingNumber) {
+        return ResponseData.success("Hủy đơn hàng thành công", orderService.cancelOrder(trackingNumber));
+    }
 }
