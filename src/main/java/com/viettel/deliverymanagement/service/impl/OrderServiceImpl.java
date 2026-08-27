@@ -196,15 +196,17 @@ public class OrderServiceImpl implements OrderService {
                 .trackingNumber(order.getTrackingNumber())
                 .senderName(order.getSenderName())
                 .senderPhone(order.getSenderPhone())
+                .senderAddress(order.getSenderAddress())
                 .receiverName(order.getReceiverName())
                 .receiverPhone(order.getReceiverPhone())
+                .receiverAddress(order.getReceiverAddress())
                 .shippingFee(order.getShippingFee())
                 .discountFee(order.getDiscountFee())
                 .totalFee(order.getTotalFee())
                 .totalPrice(order.getTotalPrice() != null ? order.getTotalPrice() : order.getTotalFee())
                 .codAmount(order.getCodAmount())
                 .status(order.getStatus())
-                .createdAt(LocalDateTime.now())
+                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now())
                 .build();
     }
 }

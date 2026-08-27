@@ -49,6 +49,7 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://localhost:3000",
+                "http://localhost:8443",
                 "https://genuine-ganache-5f9e66.netlify.app",
                 "https://*.netlify.app",
                 "https://delivery-management-frontend.vercel.app", // Thêm domain Vercel cụ thể của bạn
