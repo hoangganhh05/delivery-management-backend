@@ -57,6 +57,6 @@ public class GlobalExceptionHandler {
         log.error("Lỗi không mong đợi trong hệ thống: ", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ResponseData.error("Lỗi hệ thống: " + e.getMessage(), "INTERNAL_SERVER_ERROR"));
+                .body(ResponseData.error("Không thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.", "INTERNAL_SERVER_ERROR"));
     }
 }

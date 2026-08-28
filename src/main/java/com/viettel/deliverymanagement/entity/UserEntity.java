@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * UserEntity: Ánh xạ chuẩn theo schema bảng users thực tế trong Database.
@@ -45,4 +46,14 @@ public class UserEntity implements Serializable {
     @Column(name = "status", length = 20)
     @Builder.Default
     private String status = "ACTIVE"; // ACTIVE, INACTIVE, BLOCKED
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }
