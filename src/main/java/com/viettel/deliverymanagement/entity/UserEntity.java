@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 /**
  * UserEntity: Ánh xạ chuẩn theo schema bảng users thực tế trong Database.
- * Không chứa các trường audit (created_at, updated_at, is_deleted) để tránh lỗi thiếu cột.
+ * Ánh xạ đầy đủ các trường thời gian bắt buộc của bảng users.
  */
 @Entity
 @Table(name = "users")
@@ -50,10 +50,21 @@ public class UserEntity implements Serializable {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        if (updatedAt == null) {
+            updatedAt = createdAt;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
