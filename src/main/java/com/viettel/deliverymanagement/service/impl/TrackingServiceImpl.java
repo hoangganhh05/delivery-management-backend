@@ -7,13 +7,13 @@ import com.viettel.deliverymanagement.entity.ShipmentEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.service.TrackingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +24,7 @@ public class TrackingServiceImpl implements TrackingService {
 
     private final OrderRepository orderRepository;
     private final ShipmentRepository shipmentRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -34,13 +35,18 @@ public class TrackingServiceImpl implements TrackingService {
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
         List<ShipmentEntity> shipments = shipmentRepository.findByOrderIdOrderByIdDesc(order.getId());
+        String shipperName = shipmentRepository
+                .findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(order.getId())
+                .flatMap(shipment -> userRepository.findById(shipment.getShipperId()))
+                .map(user -> user.getFullName() != null ? user.getFullName() : user.getUsername())
+                .orElse(null);
 
         List<ShipmentHistoryDto> historyList = shipments.stream()
                 .map(shipment -> ShipmentHistoryDto.builder()
                         .status(shipment.getStatus())
                         .note(shipment.getNote())
                         .proofImageUrl(shipment.getProofImageUrl())
-                        .timestamp(LocalDateTime.now())
+                        .timestamp(shipment.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
 
@@ -48,8 +54,10 @@ public class TrackingServiceImpl implements TrackingService {
 
         return TrackingResponse.builder()
                 .trackingNumber(order.getTrackingNumber())
+                .orderId(order.getId())
                 .senderName(order.getSenderName())
                 .receiverName(order.getReceiverName())
+                .shipperName(shipperName)
                 .currentStatus(order.getStatus())
                 .shippingFee(order.getShippingFee())
                 .codAmount(order.getCodAmount())

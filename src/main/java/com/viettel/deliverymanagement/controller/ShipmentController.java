@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -34,8 +35,9 @@ public class ShipmentController {
     @Operation(summary = "Cập nhật trạng thái giao hàng", description = "Cập nhật trạng thái mới cho đơn hàng và ghi nhận lịch sử shipment")
     public ResponseData<Void> updateShipmentStatus(
             @PathVariable("orderId") Long orderId,
-            @Valid @RequestBody UpdateShipmentStatusRequest request) {
-        shipmentService.updateShipmentStatus(orderId, request);
+            @Valid @RequestBody UpdateShipmentStatusRequest request,
+            Authentication authentication) {
+        shipmentService.updateShipmentStatus(orderId, request, authentication.getName());
         return ResponseData.success("Cập nhật trạng thái giao hàng thành công", null);
     }
 }

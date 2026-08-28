@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface PaymentService {
 
-    PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req);
+    PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req, String username);
 
     void processVNPayCallback(Map<String, String> queryParams);
 }

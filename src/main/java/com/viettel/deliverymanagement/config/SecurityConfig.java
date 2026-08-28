@@ -85,10 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/tracking/**", "/api/v1/tracking/**").permitAll()
                         .requestMatchers("/payment/vnpay-callback", "/api/v1/payment/vnpay-callback").permitAll()
-                        .requestMatchers("/payment/**", "/api/v1/payment/**").permitAll()
-                        .requestMatchers("/vouchers/**", "/api/v1/vouchers/**").permitAll()
-                        .requestMatchers("/shippers/**", "/api/v1/shippers/**").permitAll()
-                        .requestMatchers("/notifications/**", "/api/v1/notifications/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/vouchers/calculate", "/api/v1/vouchers/calculate").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -98,7 +95,12 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Phân quyền theo vai trò (RBAC)
-                        .requestMatchers("/shipments/assign", "/api/v1/shipments/assign").hasAnyRole("ADMIN", "SHIPPER", "CUSTOMER")
+                        .requestMatchers("/dashboard/**", "/api/v1/dashboard/**").hasRole("ADMIN")
+                        .requestMatchers("/users/**", "/api/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/shippers/**", "/api/v1/shippers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/vouchers", "/api/v1/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/vouchers", "/api/v1/vouchers").hasRole("ADMIN")
+                        .requestMatchers("/shipments/assign", "/api/v1/shipments/assign").hasRole("ADMIN")
                         .requestMatchers("/shipments/orders/**", "/api/v1/shipments/orders/**").hasAnyRole("SHIPPER", "ADMIN")
 
                         // Tất cả các request còn lại yêu cầu xác thực JWT

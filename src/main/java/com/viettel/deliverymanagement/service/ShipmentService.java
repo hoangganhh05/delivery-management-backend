@@ -7,5 +7,5 @@ public interface ShipmentService {
 
     void assignShipper(AssignShipperRequest request);
 
-    void updateShipmentStatus(Long orderId, UpdateShipmentStatusRequest request);
+    void updateShipmentStatus(Long orderId, UpdateShipmentStatusRequest request, String username);
 }

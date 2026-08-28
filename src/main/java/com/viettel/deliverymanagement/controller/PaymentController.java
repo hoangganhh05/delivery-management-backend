@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,8 +31,9 @@ public class PaymentController {
     )
     public ResponseData<PaymentResponse> createVNPayPayment(
             @PathVariable("orderId") Long orderId,
-            HttpServletRequest request) {
-        PaymentResponse response = paymentService.createVNPayPayment(orderId, request);
+            HttpServletRequest request,
+            Authentication authentication) {
+        PaymentResponse response = paymentService.createVNPayPayment(orderId, request, authentication.getName());
         return ResponseData.success("Tạo URL thanh toán VNPay thành công", response);
     }
 

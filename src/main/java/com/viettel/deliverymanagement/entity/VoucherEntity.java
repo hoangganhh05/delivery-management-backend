@@ -40,4 +40,14 @@ public class VoucherEntity implements Serializable {
 
     @Column(name = "usage_limit")
     private Integer usageLimit;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

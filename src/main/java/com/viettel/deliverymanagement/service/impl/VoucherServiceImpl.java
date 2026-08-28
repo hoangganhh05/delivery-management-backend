@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -23,11 +24,18 @@ public class VoucherServiceImpl implements VoucherService {
     private final VoucherRepository voucherRepository;
 
     @Override
+    @Transactional(readOnly = true)
+    public List<VoucherEntity> getVouchers() {
+        return voucherRepository.findAll();
+    }
+
+    @Override
     public BigDecimal calculateDiscount(ApplyVoucherRequest request) {
         log.info("Bắt đầu tính toán giảm giá cho mã voucher: {} với giá trị đơn hàng: {}", 
                 request.getVoucherCode(), request.getOrderAmount());
 
-        VoucherEntity voucher = voucherRepository.findByCode(request.getVoucherCode())
+        String normalizedCode = request.getVoucherCode().trim().toUpperCase();
+        VoucherEntity voucher = voucherRepository.findByCode(normalizedCode)
                 .orElseThrow(() -> new AppException("VOUCHER_NOT_FOUND", "Mã voucher không tồn tại hoặc đã bị vô hiệu hóa"));
 
         LocalDateTime now = LocalDateTime.now();
@@ -87,13 +95,14 @@ public class VoucherServiceImpl implements VoucherService {
         log.info("Bắt đầu tạo voucher mới với mã: {}", request.getCode());
 
         // Kiểm tra mã voucher đã tồn tại chưa
-        if (voucherRepository.findByCode(request.getCode()).isPresent()) {
+        String normalizedCode = request.getCode().trim().toUpperCase();
+        if (voucherRepository.findByCode(normalizedCode).isPresent()) {
             log.warn("Mã voucher {} đã tồn tại", request.getCode());
             throw new AppException("VOUCHER_CODE_EXISTS", "Mã voucher đã tồn tại trong hệ thống");
         }
 
         VoucherEntity voucher = VoucherEntity.builder()
-                .code(request.getCode())
+                .code(normalizedCode)
                 .discountPercent(request.getDiscountPercent())
                 .maxDiscountAmount(request.getMaxDiscountAmount())
                 .minOrderAmount(request.getMinOrderAmount())

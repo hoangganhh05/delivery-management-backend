@@ -1,12 +1,17 @@
 package com.viettel.deliverymanagement.service;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
+import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
+import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.repository.UserRepository;
+import com.viettel.deliverymanagement.repository.VoucherRepository;
 import com.viettel.deliverymanagement.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +33,15 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private VoucherRepository voucherRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ShipmentRepository shipmentRepository;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -72,10 +86,12 @@ class OrderServiceImplTest {
                 .build();
         savedOrder.setId(1L);
 
+        UserEntity customer = testUser(2L, "customer", Role.CUSTOMER);
+        when(userRepository.findByUsername("customer")).thenReturn(Optional.of(customer));
         when(orderRepository.save(any(OrderEntity.class))).thenReturn(savedOrder);
 
         // Act
-        OrderResponse response = orderService.createOrder(request);
+        OrderResponse response = orderService.createOrder(request, "customer");
 
         // Assert
         assertNotNull(response);
@@ -88,7 +104,7 @@ class OrderServiceImplTest {
         assertEquals("0912345678", response.getReceiverPhone());
         assertEquals(BigDecimal.valueOf(35000), response.getTotalFee());
         assertEquals(BigDecimal.valueOf(200000), response.getTotalPrice());
-        assertNotNull(response.getCreatedAt());
+        assertNull(response.getCreatedAt());
 
         verify(orderRepository, times(1)).save(any(OrderEntity.class));
     }
@@ -109,12 +125,14 @@ class OrderServiceImplTest {
                 .status(OrderStatus.IN_TRANSIT)
                 .build();
         mockOrder.setId(10L);
+        UserEntity admin = testUser(1L, "admin", Role.ADMIN);
 
         when(orderRepository.findByTrackingNumber(trackingNumber))
                 .thenReturn(Optional.of(mockOrder));
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
 
         // Act
-        OrderResponse response = orderService.getOrderByTrackingNumber(trackingNumber);
+        OrderResponse response = orderService.getOrderByTrackingNumber(trackingNumber, "admin");
 
         // Assert
         assertNotNull(response);
@@ -141,12 +159,23 @@ class OrderServiceImplTest {
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> 
-                orderService.getOrderByTrackingNumber(nonExistentTrackingNumber)
+                orderService.getOrderByTrackingNumber(nonExistentTrackingNumber, "admin")
         );
 
         assertEquals("ORDER_NOT_FOUND", exception.getCode());
         assertTrue(exception.getMessage().contains(nonExistentTrackingNumber));
 
         verify(orderRepository, times(1)).findByTrackingNumber(nonExistentTrackingNumber);
+    }
+
+    private UserEntity testUser(Long id, String username, Role role) {
+        UserEntity user = UserEntity.builder()
+                .username(username)
+                .password("encoded")
+                .role(role)
+                .status("ACTIVE")
+                .build();
+        user.setId(id);
+        return user;
     }
 }

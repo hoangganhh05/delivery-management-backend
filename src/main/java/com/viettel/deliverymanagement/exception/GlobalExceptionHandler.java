@@ -21,8 +21,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ResponseData<Void>> handleAppException(AppException e) {
         log.warn("Nghiệp vụ AppException [{}]: {}", e.getCode(), e.getMessage());
+        HttpStatus status = e.getCode().endsWith("ACCESS_DENIED")
+                ? HttpStatus.FORBIDDEN
+                : HttpStatus.BAD_REQUEST;
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(status)
                 .body(ResponseData.error(e.getMessage(), e.getCode()));
     }
 

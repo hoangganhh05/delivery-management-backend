@@ -1,13 +1,16 @@
 package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.dto.request.AssignShipperRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentStatusRequest;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
+import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.service.NotificationService;
 import com.viettel.deliverymanagement.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     private final OrderRepository orderRepository;
     private final ShipmentRepository shipmentRepository;
+    private final UserRepository userRepository;
     private final NotificationService notificationService;
 
     @Override
@@ -32,9 +36,15 @@ public class ShipmentServiceImpl implements ShipmentService {
         OrderEntity order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + request.getOrderId()));
 
-        if (order.getStatus() != OrderStatus.CREATED) {
+        UserEntity shipper = userRepository.findById(request.getShipperId())
+                .orElseThrow(() -> new AppException("SHIPPER_NOT_FOUND", "Không tìm thấy shipper được chọn"));
+        if (shipper.getRole() != Role.SHIPPER || !"ACTIVE".equalsIgnoreCase(shipper.getStatus())) {
+            throw new AppException("INVALID_SHIPPER", "Tài khoản được chọn không phải shipper đang hoạt động");
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PAID) {
             log.warn("Không thể phân công đơn hàng ID {}. Trạng thái hiện tại: {}", order.getId(), order.getStatus());
-            throw new AppException("INVALID_ORDER_STATUS", "Chỉ có thể phân công shipper cho đơn hàng ở trạng thái CREATED");
+            throw new AppException("INVALID_ORDER_STATUS", "Chỉ có thể phân công đơn hàng mới hoặc đã thanh toán");
         }
 
         // Cập nhật trạng thái đơn hàng sang ASSIGNED
@@ -67,11 +77,22 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     @Override
     @Transactional
-    public void updateShipmentStatus(Long orderId, UpdateShipmentStatusRequest request) {
+    public void updateShipmentStatus(Long orderId, UpdateShipmentStatusRequest request, String username) {
         log.info("Cập nhật trạng thái đơn hàng ID {} sang trạng thái {}", orderId, request.getStatus());
 
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
+
+        UserEntity actor = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+        ShipmentEntity assignment = shipmentRepository
+                .findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(orderId)
+                .orElseThrow(() -> new AppException("SHIPMENT_NOT_ASSIGNED", "Đơn hàng chưa được phân công shipper"));
+
+        if (actor.getRole() == Role.SHIPPER && !actor.getId().equals(assignment.getShipperId())) {
+            throw new AppException("SHIPMENT_ACCESS_DENIED", "Bạn không được phân công xử lý đơn hàng này");
+        }
+        validateTransition(order.getStatus(), request.getStatus());
 
         // Cập nhật trạng thái mới cho đơn hàng
         order.setStatus(request.getStatus());
@@ -80,6 +101,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         // Lưu bản ghi theo dõi vết vào ShipmentEntity
         ShipmentEntity shipment = ShipmentEntity.builder()
                 .orderId(order.getId())
+                .shipperId(assignment.getShipperId())
                 .status(request.getStatus())
                 .note(request.getNote())
                 .proofImageUrl(request.getProofImageUrl())
@@ -100,6 +122,21 @@ public class ShipmentServiceImpl implements ShipmentService {
             }
         } catch (Exception e) {
             log.warn("Không thể tạo thông báo: {}", e.getMessage());
+        }
+    }
+
+    private void validateTransition(OrderStatus current, OrderStatus next) {
+        boolean valid = switch (current) {
+            case ASSIGNED -> next == OrderStatus.PICKED_UP;
+            case PICKED_UP -> next == OrderStatus.IN_TRANSIT || next == OrderStatus.SHIPPING;
+            case IN_TRANSIT, SHIPPING -> next == OrderStatus.DELIVERED || next == OrderStatus.FAILED;
+            default -> false;
+        };
+        if (!valid) {
+            throw new AppException(
+                    "INVALID_STATUS_TRANSITION",
+                    "Không thể chuyển trạng thái từ " + current + " sang " + next
+            );
         }
     }
 }

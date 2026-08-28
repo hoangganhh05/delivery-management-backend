@@ -42,9 +42,15 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, String username) {
         NotificationEntity notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new AppException("NOTIFICATION_NOT_FOUND", "Không tìm thấy thông báo"));
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+        if (!user.getId().equals(notification.getUserId())) {
+            throw new AppException("NOTIFICATION_ACCESS_DENIED", "Bạn không có quyền thay đổi thông báo này");
+        }
 
         notification.setIsRead(true);
         notificationRepository.save(notification);

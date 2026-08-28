@@ -1,18 +1,26 @@
 package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
+import com.viettel.deliverymanagement.dto.response.OrderItemResponse;
 import com.viettel.deliverymanagement.dto.response.PageResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.OrderItemEntity;
+import com.viettel.deliverymanagement.entity.ShipmentEntity;
+import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
+import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.repository.VoucherRepository;
 import com.viettel.deliverymanagement.service.OrderService;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,10 +44,13 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final VoucherRepository voucherRepository;
+    private final UserRepository userRepository;
+    private final ShipmentRepository shipmentRepository;
 
     @Override
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request) {
+    public OrderResponse createOrder(CreateOrderRequest request, String username) {
+        UserEntity currentUser = requireUser(username);
         // 1. Sinh mã vận đơn tự động (Tracking Number)
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -97,6 +108,10 @@ public class OrderServiceImpl implements OrderService {
                     if (discountFee.compareTo(shippingFee) > 0) {
                         discountFee = shippingFee;
                     }
+                    if (voucher.getUsageLimit() != null) {
+                        voucher.setUsageLimit(voucher.getUsageLimit() - 1);
+                        voucherRepository.save(voucher);
+                    }
                 }
             }
         }
@@ -109,6 +124,7 @@ public class OrderServiceImpl implements OrderService {
         // 2. Bắt đầu build OrderEntity
         OrderEntity order = OrderEntity.builder()
                 .trackingNumber(trackingNumber)
+                .senderId(currentUser.getId())
                 .senderName(request.getSenderName())
                 .senderPhone(request.getSenderPhone())
                 .senderAddress(request.getSenderAddress())
@@ -146,19 +162,33 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse getOrderByTrackingNumber(String trackingNumber) {
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderByTrackingNumber(String trackingNumber, String username) {
         OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
+        assertCanAccess(order, requireUser(username));
         return mapToOrderResponse(order);
     }
 
     @Override
-    public PageResponse<OrderResponse> searchOrders(OrderSearchRequest request) {
+    @Transactional(readOnly = true)
+    public PageResponse<OrderResponse> searchOrders(OrderSearchRequest request, String username) {
+        UserEntity currentUser = requireUser(username);
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("id").descending());
 
         Specification<OrderEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (currentUser.getRole() == Role.CUSTOMER) {
+                predicates.add(cb.equal(root.get("senderId"), currentUser.getId()));
+            } else if (currentUser.getRole() == Role.SHIPPER) {
+                Subquery<Long> assignedOrders = query.subquery(Long.class);
+                Root<ShipmentEntity> shipment = assignedOrders.from(ShipmentEntity.class);
+                assignedOrders.select(shipment.get("orderId"))
+                        .where(cb.equal(shipment.get("shipperId"), currentUser.getId()));
+                predicates.add(root.get("id").in(assignedOrders));
+            }
 
             if (request.getStatus() != null) {
                 predicates.add(cb.equal(root.get("status"), request.getStatus()));
@@ -192,20 +222,41 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponse cancelOrder(String trackingNumber) {
+    public OrderResponse cancelOrder(String trackingNumber, String username) {
         OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
-        if (order.getStatus() == OrderStatus.DELIVERED
-                || order.getStatus() == OrderStatus.DONE
-                || order.getStatus() == OrderStatus.COMPLETED) {
-            throw new AppException("ORDER_CANNOT_CANCEL", "Không thể hủy đơn hàng đã hoàn thành");
+        UserEntity currentUser = requireUser(username);
+        assertCanAccess(order, currentUser);
+        if (currentUser.getRole() == Role.SHIPPER) {
+            throw new AppException("ORDER_ACCESS_DENIED", "Shipper không có quyền hủy đơn hàng");
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
+            throw new AppException("ORDER_CANNOT_CANCEL", "Chỉ có thể hủy đơn hàng chưa được phân công");
         }
         if (order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.CANCELLED);
             order = orderRepository.save(order);
         }
         return mapToOrderResponse(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersForShipper(Long shipperId) {
+        UserEntity shipper = userRepository.findById(shipperId)
+                .orElseThrow(() -> new AppException("SHIPPER_NOT_FOUND", "Không tìm thấy shipper"));
+        if (shipper.getRole() != Role.SHIPPER) {
+            throw new AppException("INVALID_SHIPPER", "Tài khoản được chọn không phải shipper");
+        }
+        List<Long> orderIds = shipmentRepository.findDistinctOrderIdsByShipperId(shipperId);
+        if (orderIds.isEmpty()) {
+            return List.of();
+        }
+        return orderRepository.findByIdInOrderByIdDesc(orderIds).stream()
+                .map(this::mapToOrderResponse)
+                .toList();
     }
 
     private OrderResponse mapToOrderResponse(OrderEntity order) {
@@ -224,7 +275,35 @@ public class OrderServiceImpl implements OrderService {
                 .totalPrice(order.getTotalPrice() != null ? order.getTotalPrice() : order.getTotalFee())
                 .codAmount(order.getCodAmount())
                 .status(order.getStatus())
-                .createdAt(LocalDateTime.now())
+                .createdAt(order.getCreatedAt())
+                .items(order.getItems() == null ? List.of() : order.getItems().stream()
+                        .map(item -> OrderItemResponse.builder()
+                                .id(item.getId())
+                                .itemName(item.getItemName())
+                                .quantity(item.getQuantity())
+                                .weightGram(item.getWeightGram())
+                                .declaredValue(item.getDeclaredValue())
+                                .build())
+                        .toList())
                 .build();
+    }
+
+    private UserEntity requireUser(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+    }
+
+    private void assertCanAccess(OrderEntity order, UserEntity user) {
+        if (user.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (user.getRole() == Role.CUSTOMER && user.getId().equals(order.getSenderId())) {
+            return;
+        }
+        if (user.getRole() == Role.SHIPPER
+                && shipmentRepository.existsByOrderIdAndShipperId(order.getId(), user.getId())) {
+            return;
+        }
+        throw new AppException("ORDER_ACCESS_DENIED", "Bạn không có quyền truy cập đơn hàng này");
     }
 }

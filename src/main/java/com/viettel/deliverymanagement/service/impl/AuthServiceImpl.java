@@ -42,8 +42,7 @@ public class AuthServiceImpl implements AuthService {
                 ? request.getPhoneNumber().trim()
                 : null;
 
-        log.info("Bắt đầu đăng ký tài khoản cho username: {}, fullName: {}, email: {}, phone: {}", 
-                username, fullName, email, phoneNumber);
+        log.info("Bắt đầu đăng ký tài khoản cho username: {}", username);
 
         // 1. Kiểm tra username đã tồn tại chưa
         if (userRepository.existsByUsername(username)) {
@@ -63,10 +62,11 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException("PHONE_ALREADY_EXISTS", "Số điện thoại đã được đăng ký cho tài khoản khác");
         }
 
-        // 4. Mặc định role là CUSTOMER nếu không truyền hoặc null
-        Role role = request.getRole() != null ? request.getRole() : Role.CUSTOMER;
+        // Tài khoản tự đăng ký luôn là khách hàng. Vai trò quản trị chỉ được cấp
+        // qua quy trình quản trị riêng, không bao giờ tin dữ liệu role từ client.
+        Role role = Role.CUSTOMER;
 
-        // 5. Tạo UserEntity mới với mật khẩu mã hóa BCrypt
+        // 4. Tạo UserEntity mới với mật khẩu mã hóa BCrypt
         UserEntity newUser = UserEntity.builder()
                 .username(username)
                 .password(passwordEncoder.encode(request.getPassword()))

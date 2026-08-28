@@ -22,11 +22,15 @@ public class TrackingResponse implements Serializable {
     @Schema(description = "Mã vận đơn tra cứu", example = "VT1A2B3C4D")
     private String trackingNumber;
 
+    private Long orderId;
+
     @Schema(description = "Tên người gửi", example = "Nguyễn Văn A")
     private String senderName;
 
     @Schema(description = "Tên người nhận", example = "Trần Thị B")
     private String receiverName;
+
+    private String shipperName;
 
     @Schema(description = "Trạng thái hiện tại của đơn hàng", example = "IN_TRANSIT")
     private OrderStatus currentStatus;

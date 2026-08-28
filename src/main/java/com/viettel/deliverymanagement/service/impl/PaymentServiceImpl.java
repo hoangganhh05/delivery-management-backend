@@ -2,12 +2,15 @@ package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.config.VNPayConfig;
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.dto.response.PaymentResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
+import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
+import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -35,18 +38,24 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final OrderRepository orderRepository;
     private final ShipmentRepository shipmentRepository;
+    private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req) {
+    public PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req, String username) {
         log.info("Khởi tạo thanh toán VNPay cho đơn hàng ID: {}", orderId);
 
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
 
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new AppException("ORDER_CANCELLED", "Không thể thanh toán đơn hàng đã bị hủy");
+        UserEntity currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+        if (currentUser.getRole() != Role.ADMIN && !currentUser.getId().equals(order.getSenderId())) {
+            throw new AppException("PAYMENT_ACCESS_DENIED", "Bạn không có quyền thanh toán đơn hàng này");
+        }
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
+            throw new AppException("INVALID_PAYMENT_STATUS", "Đơn hàng không ở trạng thái có thể thanh toán");
         }
 
         long amount = order.getTotalFee().multiply(BigDecimal.valueOf(100)).longValue();
@@ -67,7 +76,7 @@ public class PaymentServiceImpl implements PaymentService {
         vnp_Params.put("vnp_ReturnUrl", vnPayConfig.getVnpReturnUrl());
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
         String vnp_CreateDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
@@ -136,6 +145,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
 
         if ("00".equals(vnp_ResponseCode)) {
+            if (order.getStatus() == OrderStatus.PAID) {
+                log.info("Bỏ qua callback VNPay lặp lại cho đơn hàng ID: {}", orderId);
+                return;
+            }
+            if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
+                throw new AppException("INVALID_PAYMENT_STATUS", "Trạng thái đơn hàng không còn phù hợp để xác nhận thanh toán");
+            }
             log.info("Giao dịch VNPay thành công cho đơn hàng ID: {}, TransactionNo: {}", orderId, vnp_TransactionNo);
             order.setStatus(OrderStatus.PAID);
             orderRepository.save(order);
