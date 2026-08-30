@@ -28,13 +28,13 @@ public class VNPayConfig {
     public static final String VNP_LOCALE = "vn";
     public static final String VNP_ORDER_TYPE = "other";
 
-    @Value("${vnpay.tmn-code}")
+    @Value("${vnpay.tmn-code:}")
     private String vnpTmnCode;
 
-    @Value("${vnpay.hash-secret}")
+    @Value("${vnpay.hash-secret:}")
     private String vnpHashSecret;
 
-    @Value("${vnpay.return-url}")
+    @Value("${vnpay.return-url:}")
     private String vnpReturnUrl;
 
     public static String hmacSHA512(final String key, final String data) {
