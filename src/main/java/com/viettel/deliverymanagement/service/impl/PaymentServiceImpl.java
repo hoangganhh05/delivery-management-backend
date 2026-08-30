@@ -161,6 +161,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .orderId(order.getId())
                     .status(OrderStatus.PAID)
                     .note("Đã thanh toán trực tuyến thành công qua VNPay (Mã giao dịch: " + vnp_TransactionNo + ")")
+                    .createdAt(java.time.LocalDateTime.now())
                     .build();
             shipmentRepository.save(shipment);
         } else {

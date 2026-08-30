@@ -18,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -75,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
                 .phoneNumber(phoneNumber)
                 .role(role)
                 .status("ACTIVE")
+                .createdAt(LocalDateTime.now())
                 .build();
 
         UserEntity savedUser = userRepository.save(newUser);

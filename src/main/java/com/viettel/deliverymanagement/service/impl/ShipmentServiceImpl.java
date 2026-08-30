@@ -57,6 +57,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .shipperId(request.getShipperId())
                 .status(OrderStatus.ASSIGNED)
                 .note(request.getNote())
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
 
         shipmentRepository.save(shipment);
@@ -105,6 +106,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .status(request.getStatus())
                 .note(request.getNote())
                 .proofImageUrl(request.getProofImageUrl())
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
 
         shipmentRepository.save(shipment);

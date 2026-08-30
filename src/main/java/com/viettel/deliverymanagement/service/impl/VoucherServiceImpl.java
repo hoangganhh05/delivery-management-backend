@@ -109,6 +109,7 @@ public class VoucherServiceImpl implements VoucherService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .usageLimit(request.getUsageLimit())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         VoucherEntity savedVoucher = voucherRepository.save(voucher);

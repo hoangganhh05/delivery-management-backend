@@ -139,6 +139,7 @@ public class OrderServiceImpl implements OrderService {
                 .totalPrice(totalPrice)
                 .codAmount(request.getCodAmount() != null ? request.getCodAmount() : BigDecimal.ZERO)
                 .status(OrderStatus.CREATED)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         // 3. Mapping danh sách OrderItems (gồm cả price và declaredValue)

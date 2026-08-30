@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -79,6 +80,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .type(type)
                 .referenceId(refId)
                 .isRead(false)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         return notificationRepository.save(notification);
