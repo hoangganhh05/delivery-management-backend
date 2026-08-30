@@ -38,19 +38,43 @@ public class DataInitializer implements CommandLineRunner {
     private void autoMigrateDatabaseSchema() {
         String[] tables = {"vouchers", "orders", "shipments", "notifications", "users"};
         for (String table : tables) {
-            try {
-                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS created_at DATETIME NULL DEFAULT CURRENT_TIMESTAMP");
-                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS created_by VARCHAR(50) NULL");
-                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS updated_by VARCHAR(50) NULL");
-                if (!"users".equals(table)) {
-                    jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) DEFAULT 0");
-                }
-            } catch (Exception e) {
-                log.debug("Auto migration note for table {}: {}", table, e.getMessage());
+            ensureColumn(table, "updated_at", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            ensureColumn(table, "created_at", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP");
+            ensureColumn(table, "created_by", "VARCHAR(50) NULL");
+            ensureColumn(table, "updated_by", "VARCHAR(50) NULL");
+            if (!"users".equals(table)) {
+                ensureColumn(table, "is_deleted", "TINYINT(1) DEFAULT 0");
             }
         }
+
+        // These columns were introduced after the first production schema was created.
+        // Without them, every SELECT from orders/order_items fails with an SQL 500.
+        ensureColumn("orders", "total_price", "DECIMAL(15,2) NULL");
+        ensureColumn("order_items", "price", "DECIMAL(12,2) NULL");
+        ensureColumn("order_items", "weight_gram", "INT NULL");
+        ensureColumn("order_items", "declared_value", "DECIMAL(12,2) NULL");
+
         log.info("Tự động kiểm tra và đồng bộ cấu trúc cột Database thành công!");
+    }
+
+    private void ensureColumn(String table, String column, String definition) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                    Integer.class,
+                    table,
+                    column
+            );
+            if (count != null && count == 0) {
+                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition);
+                log.info("Đã bổ sung cột {}.{} cho schema hiện tại", table, column);
+            }
+        } catch (Exception e) {
+            // A missing table/permission should be visible in Render logs but should not
+            // prevent the application from starting when that table is not in use yet.
+            log.warn("Không thể đồng bộ cột {}.{}: {}", table, column, e.getMessage());
+        }
     }
 
     private void seedVouchers() {
