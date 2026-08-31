@@ -2,6 +2,7 @@ package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
 import com.viettel.deliverymanagement.dto.request.CreateVoucherRequest;
+import com.viettel.deliverymanagement.dto.response.VoucherCalculationResponse;
 import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.VoucherRepository;
@@ -30,13 +31,18 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
-    public BigDecimal calculateDiscount(ApplyVoucherRequest request) {
+    @Transactional(readOnly = true)
+    public VoucherCalculationResponse calculateDiscount(ApplyVoucherRequest request) {
         log.info("Bắt đầu tính toán giảm giá cho mã voucher: {} với giá trị đơn hàng: {}", 
                 request.getVoucherCode(), request.getOrderAmount());
 
         String normalizedCode = request.getVoucherCode().trim().toUpperCase();
         VoucherEntity voucher = voucherRepository.findByCode(normalizedCode)
                 .orElseThrow(() -> new AppException("VOUCHER_NOT_FOUND", "Mã voucher không tồn tại hoặc đã bị vô hiệu hóa"));
+
+        if (!voucher.isActive()) {
+            throw new AppException("VOUCHER_INACTIVE", "Mã voucher đã bị vô hiệu hóa");
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -86,7 +92,14 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         log.info("Tính toán thành công: Số tiền giảm giá cho voucher {} là {}", voucher.getCode(), discountAmount);
-        return discountAmount;
+        BigDecimal finalAmount = request.getOrderAmount().subtract(discountAmount).max(BigDecimal.ZERO);
+        return VoucherCalculationResponse.builder()
+                .code(voucher.getCode())
+                .orderAmount(request.getOrderAmount())
+                .shippingFee(request.getShippingFee())
+                .discountAmount(discountAmount)
+                .finalAmount(finalAmount)
+                .build();
     }
 
     @Override
@@ -109,6 +122,7 @@ public class VoucherServiceImpl implements VoucherService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .usageLimit(request.getUsageLimit())
+                .active(true)
                 .createdAt(LocalDateTime.now())
                 .build();
 

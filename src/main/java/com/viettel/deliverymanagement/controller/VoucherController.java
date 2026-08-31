@@ -3,6 +3,7 @@ package com.viettel.deliverymanagement.controller;
 import com.viettel.deliverymanagement.dto.request.ApplyVoucherRequest;
 import com.viettel.deliverymanagement.dto.request.CreateVoucherRequest;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
+import com.viettel.deliverymanagement.dto.response.VoucherCalculationResponse;
 import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.service.VoucherService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -36,9 +36,9 @@ public class VoucherController {
             summary = "Tính toán số tiền giảm giá của voucher",
             description = "Kiểm tra tính hợp lệ của voucher (hạn sử dụng, giá trị đơn tối thiểu) và tính số tiền giảm"
     )
-    public ResponseData<BigDecimal> calculateDiscount(@Valid @RequestBody ApplyVoucherRequest request) {
-        BigDecimal discountAmount = voucherService.calculateDiscount(request);
-        return ResponseData.success("Tính tiền giảm giá thành công", discountAmount);
+    public ResponseData<VoucherCalculationResponse> calculateDiscount(@Valid @RequestBody ApplyVoucherRequest request) {
+        VoucherCalculationResponse result = voucherService.calculateDiscount(request);
+        return ResponseData.success("Tính tiền giảm giá thành công", result);
     }
 
     @PostMapping("/vouchers")
