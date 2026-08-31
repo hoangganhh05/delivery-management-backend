@@ -41,6 +41,10 @@ public class VoucherEntity implements Serializable {
     @Column(name = "usage_limit")
     private Integer usageLimit;
 
+    @Column(name = "active", nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

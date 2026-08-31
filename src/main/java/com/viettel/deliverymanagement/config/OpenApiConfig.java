@@ -31,6 +31,6 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("Nhập token JWT vào đây theo định dạng: Bearer <token>")));
+                                .description("Dán JWT token thô; Swagger UI sẽ tự thêm tiền tố Bearer")));
     }
 }

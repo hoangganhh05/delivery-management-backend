@@ -20,7 +20,7 @@ public class DataInitializer implements CommandLineRunner {
     private final VoucherRepository voucherRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    @Value("${app.seed-vouchers:false}")
+    @Value("${app.seed-vouchers:true}")
     private boolean seedDefaultVouchers;
 
     @Override
@@ -53,6 +53,7 @@ public class DataInitializer implements CommandLineRunner {
         ensureColumn("order_items", "price", "DECIMAL(12,2) NULL");
         ensureColumn("order_items", "weight_gram", "INT NULL");
         ensureColumn("order_items", "declared_value", "DECIMAL(12,2) NULL");
+        ensureColumn("vouchers", "active", "TINYINT(1) NOT NULL DEFAULT 1");
 
         log.info("Tự động kiểm tra và đồng bộ cấu trúc cột Database thành công!");
     }
@@ -78,10 +79,9 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedVouchers() {
-        if (voucherRepository.count() == 0) {
-            log.info("Khởi tạo mã voucher khuyến mãi mặc định...");
+        log.info("Kiểm tra các voucher khuyến mãi mặc định...");
 
-            VoucherEntity v1 = VoucherEntity.builder()
+        createVoucherIfMissing(VoucherEntity.builder()
                     .code("VIETTEL50")
                     .discountPercent(50)
                     .maxDiscountAmount(BigDecimal.valueOf(50000))
@@ -89,9 +89,10 @@ public class DataInitializer implements CommandLineRunner {
                     .startDate(LocalDateTime.now().minusDays(10))
                     .endDate(LocalDateTime.now().plusYears(2))
                     .usageLimit(500)
-                    .build();
+                    .active(true)
+                    .build());
 
-            VoucherEntity v2 = VoucherEntity.builder()
+        createVoucherIfMissing(VoucherEntity.builder()
                     .code("FREESHIP")
                     .discountPercent(100)
                     .maxDiscountAmount(BigDecimal.valueOf(30000))
@@ -99,9 +100,10 @@ public class DataInitializer implements CommandLineRunner {
                     .startDate(LocalDateTime.now().minusDays(10))
                     .endDate(LocalDateTime.now().plusYears(2))
                     .usageLimit(1000)
-                    .build();
+                    .active(true)
+                    .build());
 
-            VoucherEntity v3 = VoucherEntity.builder()
+        createVoucherIfMissing(VoucherEntity.builder()
                     .code("VIETTEL20")
                     .discountPercent(20)
                     .maxDiscountAmount(BigDecimal.valueOf(20000))
@@ -109,12 +111,15 @@ public class DataInitializer implements CommandLineRunner {
                     .startDate(LocalDateTime.now().minusDays(10))
                     .endDate(LocalDateTime.now().plusYears(2))
                     .usageLimit(200)
-                    .build();
+                    .active(true)
+                    .build());
 
-            voucherRepository.save(v1);
-            voucherRepository.save(v2);
-            voucherRepository.save(v3);
-            log.info("Khởi tạo danh sách Voucher thành công: VIETTEL50, FREESHIP, VIETTEL20");
+        log.info("Đã bảo đảm tồn tại các voucher: VIETTEL50, FREESHIP, VIETTEL20");
+    }
+
+    private void createVoucherIfMissing(VoucherEntity voucher) {
+        if (voucherRepository.findByCode(voucher.getCode()).isEmpty()) {
+            voucherRepository.save(voucher);
         }
     }
 }
