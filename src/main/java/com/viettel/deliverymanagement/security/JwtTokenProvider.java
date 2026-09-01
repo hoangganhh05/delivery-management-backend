@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Slf4j
@@ -31,16 +32,25 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String username, String fullName, Role role) {
+    public String generateToken(
+            String username,
+            String fullName,
+            Role role,
+            LocalDateTime passwordChangedAt
+    ) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
-        return Jwts.builder()
+        var tokenBuilder = Jwts.builder()
                 .subject(username)
                 .claim("fullName", fullName)
                 .claim("role", role.name())
                 .issuedAt(now)
-                .expiration(expiryDate)
+                .expiration(expiryDate);
+        if (passwordChangedAt != null) {
+            tokenBuilder.claim("passwordChangedAt", passwordChangedAt.toString());
+        }
+        return tokenBuilder
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
@@ -63,6 +73,16 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.get("role", String.class);
+    }
+
+    public String getPasswordChangedAtFromJwt(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("passwordChangedAt", String.class);
     }
 
     public boolean validateToken(String authToken) {

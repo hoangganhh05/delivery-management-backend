@@ -33,7 +33,7 @@ public class RegisterRequest {
 
     @Schema(description = "Mật khẩu tài khoản", example = "Password@123")
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
+    @Size(min = 6, max = 72, message = "Mật khẩu phải có từ 6 đến 72 ký tự")
     @JsonProperty("password")
     private String password;
 

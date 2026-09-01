@@ -96,6 +96,22 @@ public class SecurityConfig {
 
                         // Phân quyền theo vai trò (RBAC)
                         .requestMatchers("/dashboard/**", "/api/v1/dashboard/**").hasRole("ADMIN")
+                        // API tự phục vụ: luôn xác định tài khoản từ JWT, không nhận userId từ client.
+                        // Các matcher này phải đứng trước rule /users/** dành riêng cho ADMIN.
+                        .requestMatchers(
+                                "/users/me",
+                                "/users/profile",
+                                "/users/change-password",
+                                "/users/settings",
+                                "/users/addresses",
+                                "/users/addresses/**",
+                                "/api/v1/users/me",
+                                "/api/v1/users/profile",
+                                "/api/v1/users/change-password",
+                                "/api/v1/users/settings",
+                                "/api/v1/users/addresses",
+                                "/api/v1/users/addresses/**"
+                        ).authenticated()
                         .requestMatchers("/users/**", "/api/v1/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/shippers/**", "/api/v1/shippers/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/vouchers", "/api/v1/vouchers").hasRole("ADMIN")

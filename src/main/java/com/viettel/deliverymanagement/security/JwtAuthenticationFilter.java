@@ -40,6 +40,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     filterChain.doFilter(request, response);
                     return;
                 }
+                if (userDetails instanceof CustomUserDetails customUserDetails
+                        && !tokenMatchesCurrentPasswordVersion(jwt, customUserDetails)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -59,5 +64,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    private boolean tokenMatchesCurrentPasswordVersion(String jwt, CustomUserDetails userDetails) {
+        String currentPasswordVersion = userDetails.getUser().getPasswordChangedAt() == null
+                ? null
+                : userDetails.getUser().getPasswordChangedAt().toString();
+        if (currentPasswordVersion == null) {
+            return true;
+        }
+        return currentPasswordVersion.equals(jwtTokenProvider.getPasswordChangedAtFromJwt(jwt));
     }
 }

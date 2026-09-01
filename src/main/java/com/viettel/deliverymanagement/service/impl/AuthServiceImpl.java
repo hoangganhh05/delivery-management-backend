@@ -5,9 +5,11 @@ import com.viettel.deliverymanagement.dto.request.LoginRequest;
 import com.viettel.deliverymanagement.dto.request.RegisterRequest;
 import com.viettel.deliverymanagement.dto.response.AuthResponse;
 import com.viettel.deliverymanagement.entity.UserEntity;
+import com.viettel.deliverymanagement.entity.UserSettingsEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.security.JwtTokenProvider;
+import com.viettel.deliverymanagement.security.PasswordPolicy;
 import com.viettel.deliverymanagement.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -33,12 +36,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        PasswordPolicy.requireBcryptCompatible(request.getPassword());
         String username = request.getUsername().trim();
         String fullName = (request.getFullName() != null && !request.getFullName().trim().isEmpty())
                 ? request.getFullName().trim()
                 : username;
         String email = (request.getEmail() != null && !request.getEmail().trim().isEmpty())
-                ? request.getEmail().trim()
+                ? request.getEmail().trim().toLowerCase(Locale.ROOT)
                 : null;
         String phoneNumber = (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty())
                 ? request.getPhoneNumber().trim()
@@ -79,6 +83,7 @@ public class AuthServiceImpl implements AuthService {
                 .status("ACTIVE")
                 .createdAt(LocalDateTime.now())
                 .build();
+        newUser.attachSettings(UserSettingsEntity.defaultsFor(newUser));
 
         UserEntity savedUser = userRepository.save(newUser);
         log.info("Đăng ký tài khoản thành công cho user ID: {}, username: {}, role: {}", 
@@ -88,7 +93,8 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtTokenProvider.generateToken(
                 savedUser.getUsername(),
                 savedUser.getFullName(),
-                savedUser.getRole()
+                savedUser.getRole(),
+                savedUser.getPasswordChangedAt()
         );
 
         return AuthResponse.builder()
@@ -103,6 +109,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
+        PasswordPolicy.requireBcryptCompatible(request.getPassword());
         String username = request.getUsername().trim();
         log.info("Bắt đầu xác thực đăng nhập cho username: {}", username);
 
@@ -126,7 +133,8 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtTokenProvider.generateToken(
                 user.getUsername(),
                 user.getFullName(),
-                user.getRole()
+                user.getRole(),
+                user.getPasswordChangedAt()
         );
 
         log.info("Đăng nhập thành công cho username: {}, role: {}", user.getUsername(), user.getRole());
