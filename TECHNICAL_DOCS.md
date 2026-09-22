@@ -88,21 +88,22 @@ mvn clean spring-boot:run
 
 #### 3. Khởi động Frontend (React Vite):
 ```bash
-cd e:\JAVA_VIETTEL\delivery-frontend
+cd "e:\JAVA_VIETTEL\Delivery Management System UI_UX"
 npm install
+# Tạo .env.local với: VITE_API_BASE_URL=http://localhost:8080/api/v1
 npm run dev
 ```
-*(Frontend lắng nghe tại `http://localhost:5173`)*.
+*(Frontend lắng nghe tại `http://localhost:8443`; nếu không đặt `.env.local`, UI sẽ dùng API Render mặc định.)*.
 
 ---
 
 ## 5. KỊCH BẢN DEMO QUY TRÌNH HOÀN CHỈNH (STEP-BY-STEP DEMO)
 
 ### Bước 1: Khách hàng tạo đơn & Áp dụng Voucher
-1. Truy cập `http://localhost:5173`, đăng nhập tài khoản Khách hàng (`customer` / `customer123`).
+1. Truy cập `http://localhost:8443`, đăng nhập tài khoản Khách hàng (`customer` / `customer123`).
 2. Vào tab **Tạo & Quản Lý Đơn**.
 3. Điền thông tin người nhận, kiện hàng, nhập mã voucher `VIETTEL50` $\rightarrow$ Nhấn **"Xác Nhận Tạo Đơn"**.
-4. Hệ thống sinh mã vận đơn (VD: `VT1234ABCD`) và hiển thị nút **"Thanh toán VNPay"** trực tuyến.
+4. Hệ thống sinh mã vận đơn (VD: `VT1234ABCD`) và hiển thị QR Vietcombank hoặc hướng dẫn thanh toán COD. Trạng thái chuyển khoản QR chỉ được xác nhận sau khi hệ thống đối soát giao dịch.
 
 ### Bước 2: Quản trị viên điều phối Shipper
 1. Đăng xuất và đăng nhập tài khoản Quản trị (`admin` / `admin123`).

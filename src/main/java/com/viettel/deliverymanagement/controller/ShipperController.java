@@ -52,9 +52,7 @@ public class ShipperController {
 
     private ShipperDto toDto(UserEntity shipper) {
         long activeOrders = orderService.getOrdersForShipper(shipper.getId()).stream()
-                .filter(order -> order.getStatus() != com.viettel.deliverymanagement.constant.OrderStatus.DELIVERED
-                        && order.getStatus() != com.viettel.deliverymanagement.constant.OrderStatus.CANCELLED
-                        && order.getStatus() != com.viettel.deliverymanagement.constant.OrderStatus.FAILED)
+                .filter(order -> order.getStatus() == null || !order.getStatus().isTerminal())
                 .count();
         return ShipperDto.builder()
                 .id(shipper.getId())

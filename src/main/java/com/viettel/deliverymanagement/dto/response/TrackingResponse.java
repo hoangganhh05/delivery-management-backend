@@ -32,6 +32,9 @@ public class TrackingResponse implements Serializable {
 
     private String shipperName;
 
+    @Schema(description = "Số điện thoại liên hệ của shipper", example = "0901234567")
+    private String shipperPhone;
+
     @Schema(description = "Trạng thái hiện tại của đơn hàng", example = "IN_TRANSIT")
     private OrderStatus currentStatus;
 

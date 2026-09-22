@@ -24,9 +24,9 @@ public class DashboardServiceImpl implements DashboardService {
         log.info("Bắt đầu thu thập dữ liệu thống kê Dashboard Analytics");
 
         long totalOrders = orderRepository.count();
-        long deliveredOrders = orderRepository.countByStatus(OrderStatus.DELIVERED);
+        long deliveredOrders = orderRepository.countByStatusIn(OrderStatus.deliveryCompletedStatuses());
         long cancelledOrders = orderRepository.countByStatus(OrderStatus.CANCELLED);
-        BigDecimal totalRevenue = orderRepository.sumTotalFeeByStatus(OrderStatus.DELIVERED);
+        BigDecimal totalRevenue = orderRepository.sumTotalFeeByStatusIn(OrderStatus.deliveryCompletedStatuses());
 
         if (totalRevenue == null) {
             totalRevenue = BigDecimal.ZERO;

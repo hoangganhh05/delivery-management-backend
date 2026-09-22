@@ -3,6 +3,8 @@ package com.viettel.deliverymanagement.constant;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Set;
+
 @Getter
 @RequiredArgsConstructor
 public enum OrderStatus {
@@ -20,4 +22,17 @@ public enum OrderStatus {
     FAILED("Giao hàng thất bại");
 
     private final String description;
+
+    /** Legacy data can contain any of these three values for a delivered order. */
+    public static Set<OrderStatus> deliveryCompletedStatuses() {
+        return Set.of(DELIVERED, DONE, COMPLETED);
+    }
+
+    public boolean isDeliveryCompleted() {
+        return deliveryCompletedStatuses().contains(this);
+    }
+
+    public boolean isTerminal() {
+        return isDeliveryCompleted() || this == CANCELLED || this == FAILED;
+    }
 }

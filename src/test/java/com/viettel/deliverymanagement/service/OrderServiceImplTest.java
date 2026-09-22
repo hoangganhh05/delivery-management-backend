@@ -168,6 +168,40 @@ class OrderServiceImplTest {
         verify(orderRepository, times(1)).findByTrackingNumber(nonExistentTrackingNumber);
     }
 
+    @Test
+    @DisplayName("Không tạo đơn khi voucher được gửi lên không tồn tại")
+    void createOrder_UnknownVoucher_ThrowsException() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setSenderName("Nguyen Van A");
+        request.setSenderPhone("0987654321");
+        request.setSenderAddress("Ha Noi");
+        request.setReceiverName("Tran Thi B");
+        request.setReceiverPhone("0912345678");
+        request.setReceiverAddress("Hai Phong");
+        request.setWeightGram(500);
+        request.setShippingFee(BigDecimal.valueOf(30000));
+        request.setVoucherCode("NOT_FOUND");
+
+        OrderItemRequest item = new OrderItemRequest();
+        item.setItemName("Tai lieu");
+        item.setQuantity(1);
+        item.setWeightGram(500);
+        item.setDeclaredValue(BigDecimal.valueOf(100000));
+        request.setItems(List.of(item));
+
+        when(userRepository.findByUsername("customer"))
+                .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+        when(voucherRepository.findByCode("NOT_FOUND")).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.createOrder(request, "customer")
+        );
+
+        assertEquals("VOUCHER_NOT_FOUND", exception.getCode());
+        verify(orderRepository, never()).save(any(OrderEntity.class));
+    }
+
     private UserEntity testUser(Long id, String username, Role role) {
         UserEntity user = UserEntity.builder()
                 .username(username)

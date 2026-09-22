@@ -35,6 +35,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-hoang2005}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_SERVLET_CONTEXT_PATH: /api/v1
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting the stack}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -43,8 +45,10 @@ services:
 
   frontend:
     build:
-      context: ../delivery-frontend
+      context: ../Delivery Management System UI_UX
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
     container_name: delivery_frontend
     restart: always
     ports:

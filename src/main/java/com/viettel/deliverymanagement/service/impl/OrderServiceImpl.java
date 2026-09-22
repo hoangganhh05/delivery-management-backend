@@ -35,6 +35,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -71,48 +72,49 @@ public class OrderServiceImpl implements OrderService {
             totalPrice = shippingFee != null ? shippingFee : BigDecimal.ZERO;
         }
 
-        // Xử lý áp dụng voucher an toàn không gây rollback transaction
+        // Validate the voucher again at order creation. The value calculated in
+        // the UI may be stale by the time this transactional request arrives.
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
             String code = request.getVoucherCode().trim().toUpperCase();
-            var voucherOpt = voucherRepository.findByCode(code);
-            if (voucherOpt.isPresent()) {
-                var voucher = voucherOpt.get();
-                LocalDateTime now = LocalDateTime.now();
-                boolean valid = true;
+            var voucher = voucherRepository.findByCode(code)
+                    .orElseThrow(() -> new AppException("VOUCHER_NOT_FOUND", "Mã voucher không tồn tại hoặc đã bị vô hiệu hóa"));
+            if (!voucher.isActive()) {
+                throw new AppException("VOUCHER_INACTIVE", "Mã voucher đã bị vô hiệu hóa");
+            }
 
-                if (voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) {
-                    valid = false;
-                }
-                if (voucher.getEndDate() != null && now.isAfter(voucher.getEndDate())) {
-                    valid = false;
-                }
-                if (voucher.getUsageLimit() != null && voucher.getUsageLimit() <= 0) {
-                    valid = false;
-                }
+            LocalDateTime now = LocalDateTime.now();
+            if (voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) {
+                throw new AppException("VOUCHER_NOT_YET_VALID", "Voucher chưa đến thời gian áp dụng");
+            }
+            if (voucher.getEndDate() != null && now.isAfter(voucher.getEndDate())) {
+                throw new AppException("VOUCHER_EXPIRED", "Voucher đã hết hạn sử dụng");
+            }
+            if (voucher.getUsageLimit() != null && voucher.getUsageLimit() <= 0) {
+                throw new AppException("VOUCHER_OUT_OF_USAGE", "Voucher đã hết lượt sử dụng");
+            }
 
-                // Kiểm tra đơn tối thiểu so với tiền hàng (hoặc cước vận chuyển)
-                BigDecimal baseAmountForVoucher = totalPrice.compareTo(BigDecimal.ZERO) > 0 ? totalPrice : shippingFee;
-                if (voucher.getMinOrderAmount() != null && baseAmountForVoucher.compareTo(voucher.getMinOrderAmount()) < 0) {
-                    valid = false;
-                }
+            BigDecimal baseAmountForVoucher = totalPrice.compareTo(BigDecimal.ZERO) > 0 ? totalPrice : shippingFee;
+            if (voucher.getMinOrderAmount() != null && baseAmountForVoucher.compareTo(voucher.getMinOrderAmount()) < 0) {
+                throw new AppException(
+                        "ORDER_AMOUNT_NOT_ENOUGH",
+                        "Giá trị đơn hàng chưa đạt mức tối thiểu " + voucher.getMinOrderAmount() + " để áp dụng voucher"
+                );
+            }
 
-                if (valid) {
-                    voucherId = voucher.getId();
-                    if (voucher.getDiscountPercent() != null && voucher.getDiscountPercent() > 0) {
-                        discountFee = shippingFee.multiply(BigDecimal.valueOf(voucher.getDiscountPercent()))
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                    }
-                    if (voucher.getMaxDiscountAmount() != null && discountFee.compareTo(voucher.getMaxDiscountAmount()) > 0) {
-                        discountFee = voucher.getMaxDiscountAmount();
-                    }
-                    if (discountFee.compareTo(shippingFee) > 0) {
-                        discountFee = shippingFee;
-                    }
-                    if (voucher.getUsageLimit() != null) {
-                        voucher.setUsageLimit(voucher.getUsageLimit() - 1);
-                        voucherRepository.save(voucher);
-                    }
-                }
+            voucherId = voucher.getId();
+            if (voucher.getDiscountPercent() != null && voucher.getDiscountPercent() > 0) {
+                discountFee = shippingFee.multiply(BigDecimal.valueOf(voucher.getDiscountPercent()))
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            }
+            if (voucher.getMaxDiscountAmount() != null && discountFee.compareTo(voucher.getMaxDiscountAmount()) > 0) {
+                discountFee = voucher.getMaxDiscountAmount();
+            }
+            if (discountFee.compareTo(shippingFee) > 0) {
+                discountFee = shippingFee;
+            }
+            if (voucher.getUsageLimit() != null) {
+                voucher.setUsageLimit(voucher.getUsageLimit() - 1);
+                voucherRepository.save(voucher);
             }
         }
 
@@ -196,11 +198,19 @@ public class OrderServiceImpl implements OrderService {
             }
 
             if (request.getKeyword() != null && !request.getKeyword().trim().isEmpty()) {
-                String keywordLike = "%" + request.getKeyword().trim() + "%";
-                Predicate trackingMatch = cb.like(root.get("trackingNumber"), keywordLike);
-                Predicate senderPhoneMatch = cb.like(root.get("senderPhone"), keywordLike);
-                Predicate receiverPhoneMatch = cb.like(root.get("receiverPhone"), keywordLike);
-                predicates.add(cb.or(trackingMatch, senderPhoneMatch, receiverPhoneMatch));
+                String keywordLike = "%" + request.getKeyword().trim().toLowerCase(Locale.ROOT) + "%";
+                Predicate trackingMatch = cb.like(cb.lower(root.get("trackingNumber")), keywordLike);
+                Predicate senderNameMatch = cb.like(cb.lower(root.get("senderName")), keywordLike);
+                Predicate senderPhoneMatch = cb.like(cb.lower(root.get("senderPhone")), keywordLike);
+                Predicate receiverNameMatch = cb.like(cb.lower(root.get("receiverName")), keywordLike);
+                Predicate receiverPhoneMatch = cb.like(cb.lower(root.get("receiverPhone")), keywordLike);
+                predicates.add(cb.or(
+                        trackingMatch,
+                        senderNameMatch,
+                        senderPhoneMatch,
+                        receiverNameMatch,
+                        receiverPhoneMatch
+                ));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

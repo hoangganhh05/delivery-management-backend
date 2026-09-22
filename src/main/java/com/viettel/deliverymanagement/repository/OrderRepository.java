@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
 
@@ -19,8 +20,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSp
 
     long countByStatus(OrderStatus status);
 
+    long countByStatusIn(Collection<OrderStatus> statuses);
+
     @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status = :status")
     BigDecimal sumTotalFeeByStatus(@Param("status") OrderStatus status);
+
+    @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status IN :statuses")
+    BigDecimal sumTotalFeeByStatusIn(@Param("statuses") Collection<OrderStatus> statuses);
 
     List<OrderEntity> findByIdInOrderByIdDesc(List<Long> ids);
 }

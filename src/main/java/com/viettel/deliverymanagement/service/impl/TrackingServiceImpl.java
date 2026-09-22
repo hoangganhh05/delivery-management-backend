@@ -4,6 +4,7 @@ import com.viettel.deliverymanagement.dto.response.ShipmentHistoryDto;
 import com.viettel.deliverymanagement.dto.response.TrackingResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
+import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
@@ -35,11 +36,14 @@ public class TrackingServiceImpl implements TrackingService {
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
         List<ShipmentEntity> shipments = shipmentRepository.findByOrderIdOrderByIdDesc(order.getId());
-        String shipperName = shipmentRepository
+        UserEntity shipper = shipmentRepository
                 .findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(order.getId())
                 .flatMap(shipment -> userRepository.findById(shipment.getShipperId()))
-                .map(user -> user.getFullName() != null ? user.getFullName() : user.getUsername())
                 .orElse(null);
+        String shipperName = shipper == null
+                ? null
+                : (shipper.getFullName() != null ? shipper.getFullName() : shipper.getUsername());
+        String shipperPhone = shipper == null ? null : shipper.getPhoneNumber();
 
         List<ShipmentHistoryDto> historyList = shipments.stream()
                 .map(shipment -> ShipmentHistoryDto.builder()
@@ -58,6 +62,7 @@ public class TrackingServiceImpl implements TrackingService {
                 .senderName(order.getSenderName())
                 .receiverName(order.getReceiverName())
                 .shipperName(shipperName)
+                .shipperPhone(shipperPhone)
                 .currentStatus(order.getStatus())
                 .shippingFee(order.getShippingFee())
                 .codAmount(order.getCodAmount())
