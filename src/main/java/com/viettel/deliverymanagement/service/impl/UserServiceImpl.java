@@ -8,6 +8,8 @@ import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
+import com.viettel.deliverymanagement.dto.response.UserDto;
+import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.entity.UserAddressEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.entity.UserSettingsEntity;
@@ -191,6 +193,25 @@ public class UserServiceImpl implements UserService {
         settings.setTheme(request.getTheme());
         settings.setAccentColor(request.getAccentColor().toUpperCase(Locale.ROOT));
         return toSettingsResponse(userSettingsRepository.saveAndFlush(settings));
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateRole(String actorUsername, Long userId, Role role) {
+        UserEntity actor = findUser(actorUsername);
+        UserEntity target = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy người dùng"));
+        if (actor.getRole() != Role.ADMIN && (target.getRole() == Role.ADMIN || role == Role.ADMIN)) {
+            throw new AppException("ROLE_CHANGE_DENIED", "Chỉ quản trị viên mới có thể cấp hoặc thay đổi vai trò Admin");
+        }
+        if (actor.getId().equals(target.getId()) && actor.getRole() == Role.ADMIN && role != Role.ADMIN) {
+            throw new AppException("SELF_ROLE_CHANGE_DENIED", "Quản trị viên không thể tự hạ quyền tài khoản đang dùng");
+        }
+        target.setRole(role);
+        userRepository.saveAndFlush(target);
+        return UserDto.builder().id(target.getId()).username(target.getUsername())
+                .fullName(target.getFullName()).phoneNumber(target.getPhoneNumber()).email(target.getEmail())
+                .role(target.getRole()).status(target.getStatus()).build();
     }
 
     private UserEntity findUser(String username) {

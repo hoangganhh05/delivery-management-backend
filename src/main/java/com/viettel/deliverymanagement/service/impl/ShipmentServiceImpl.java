@@ -2,6 +2,8 @@ package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.request.AssignShipperRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentStatusRequest;
 import com.viettel.deliverymanagement.entity.OrderEntity;
@@ -97,6 +99,13 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         // Cập nhật trạng thái mới cho đơn hàng
         order.setStatus(request.getStatus());
+        if (request.getStatus().isDeliveryCompleted() && order.getPaymentMethod() == PaymentMethod.COD) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAt(java.time.LocalDateTime.now());
+            order.setPaymentReference("COD-" + order.getTrackingNumber());
+        } else if (request.getStatus() == OrderStatus.FAILED && order.getPaymentStatus() != PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.FAILED);
+        }
         orderRepository.save(order);
 
         // Lưu bản ghi theo dõi vết vào ShipmentEntity

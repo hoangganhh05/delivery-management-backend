@@ -2,6 +2,7 @@ package com.viettel.deliverymanagement.config;
 
 import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.repository.VoucherRepository;
+import com.viettel.deliverymanagement.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -19,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final VoucherRepository voucherRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final PermissionService permissionService;
 
     @Value("${app.seed-vouchers:true}")
     private boolean seedDefaultVouchers;
@@ -26,6 +28,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         autoMigrateDatabaseSchema();
+        permissionService.seedDefaults();
         if (seedDefaultVouchers) {
             seedVouchers();
         }

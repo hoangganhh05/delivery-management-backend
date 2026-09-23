@@ -2,6 +2,7 @@ package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
@@ -140,6 +141,8 @@ public class OrderServiceImpl implements OrderService {
                 .totalFee(totalFee)
                 .totalPrice(totalPrice)
                 .codAmount(request.getCodAmount() != null ? request.getCodAmount() : BigDecimal.ZERO)
+                .paymentMethod(request.getPaymentMethod())
+                .paymentStatus(PaymentStatus.PENDING)
                 .status(OrderStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -248,6 +251,7 @@ public class OrderServiceImpl implements OrderService {
         }
         if (order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.CANCELLED);
+            if (order.getPaymentStatus() != PaymentStatus.PAID) order.setPaymentStatus(PaymentStatus.FAILED);
             order = orderRepository.save(order);
         }
         return mapToOrderResponse(order);
@@ -285,6 +289,10 @@ public class OrderServiceImpl implements OrderService {
                 .totalFee(order.getTotalFee())
                 .totalPrice(order.getTotalPrice() != null ? order.getTotalPrice() : order.getTotalFee())
                 .codAmount(order.getCodAmount())
+                .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
+                .paidAt(order.getPaidAt())
+                .paymentReference(order.getPaymentReference())
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems() == null ? List.of() : order.getItems().stream()

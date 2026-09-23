@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -27,6 +28,7 @@ public class VoucherController {
     private final VoucherService voucherService;
 
     @GetMapping("/vouchers")
+    @PreAuthorize("@permissionService.has(authentication, 'MANAGE_VOUCHERS')")
     public ResponseData<List<VoucherEntity>> getVouchers() {
         return ResponseData.success("Lấy danh sách voucher thành công", voucherService.getVouchers());
     }
@@ -42,6 +44,7 @@ public class VoucherController {
     }
 
     @PostMapping("/vouchers")
+    @PreAuthorize("@permissionService.has(authentication, 'MANAGE_VOUCHERS')")
     @Operation(
             summary = "Tạo voucher mới",
             description = "Tạo voucher mới với các thông tin: mã, phần trăm giảm, giới hạn giảm, giá trị đơn tối thiểu, thời gian hiệu lực"

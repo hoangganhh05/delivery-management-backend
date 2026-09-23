@@ -95,7 +95,8 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Phân quyền theo vai trò (RBAC)
-                        .requestMatchers("/dashboard/**", "/api/v1/dashboard/**").hasRole("ADMIN")
+                        // Các endpoint vận hành này dùng @PreAuthorize với ma trận quyền lưu trong DB.
+                        .requestMatchers("/dashboard/**", "/api/v1/dashboard/**").authenticated()
                         // API tự phục vụ: luôn xác định tài khoản từ JWT, không nhận userId từ client.
                         // Các matcher này phải đứng trước rule /users/** dành riêng cho ADMIN.
                         .requestMatchers(
@@ -112,12 +113,12 @@ public class SecurityConfig {
                                 "/api/v1/users/addresses",
                                 "/api/v1/users/addresses/**"
                         ).authenticated()
-                        .requestMatchers("/users/**", "/api/v1/users/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/shippers/**", "/api/v1/shippers/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/vouchers", "/api/v1/vouchers").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/vouchers", "/api/v1/vouchers").hasRole("ADMIN")
-                        .requestMatchers("/shipments/assign", "/api/v1/shipments/assign").hasRole("ADMIN")
-                        .requestMatchers("/shipments/orders/**", "/api/v1/shipments/orders/**").hasAnyRole("SHIPPER", "ADMIN")
+                        .requestMatchers("/users/**", "/api/v1/users/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/shippers/**", "/api/v1/shippers/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/vouchers", "/api/v1/vouchers").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/vouchers", "/api/v1/vouchers").authenticated()
+                        .requestMatchers("/shipments/assign", "/api/v1/shipments/assign").authenticated()
+                        .requestMatchers("/shipments/orders/**", "/api/v1/shipments/orders/**").authenticated()
 
                         // Tất cả các request còn lại yêu cầu xác thực JWT
                         .anyRequest().authenticated()

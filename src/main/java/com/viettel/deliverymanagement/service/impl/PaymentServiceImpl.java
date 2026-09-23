@@ -3,7 +3,11 @@ package com.viettel.deliverymanagement.service.impl;
 import com.viettel.deliverymanagement.config.VNPayConfig;
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.response.PaymentResponse;
+import com.viettel.deliverymanagement.dto.response.PaymentRecordResponse;
+import com.viettel.deliverymanagement.dto.response.QrPaymentResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
@@ -16,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -30,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -41,8 +47,12 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
 
+    @Value("${vietqr.bank-id:970436}") private String qrBankId;
+    @Value("${vietqr.account-number:1070980445}") private String qrAccountNumber;
+    @Value("${vietqr.account-name:CAO HOANG ANH}") private String qrAccountName;
+
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req, String username) {
         log.info("Khởi tạo thanh toán VNPay cho đơn hàng ID: {}", orderId);
 
@@ -57,6 +67,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
             throw new AppException("INVALID_PAYMENT_STATUS", "Đơn hàng không ở trạng thái có thể thanh toán");
         }
+        order.setPaymentMethod(PaymentMethod.VNPAY);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+        orderRepository.save(order);
 
         long amount = order.getTotalFee().multiply(BigDecimal.valueOf(100)).longValue();
 
@@ -154,6 +167,10 @@ public class PaymentServiceImpl implements PaymentService {
             }
             log.info("Giao dịch VNPay thành công cho đơn hàng ID: {}, TransactionNo: {}", orderId, vnp_TransactionNo);
             order.setStatus(OrderStatus.PAID);
+            order.setPaymentMethod(PaymentMethod.VNPAY);
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAt(LocalDateTime.now());
+            order.setPaymentReference(vnp_TransactionNo);
             orderRepository.save(order);
 
             // Lưu log lịch sử shipment theo dõi vết
@@ -165,8 +182,69 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
             shipmentRepository.save(shipment);
         } else {
+            order.setPaymentMethod(PaymentMethod.VNPAY);
+            order.setPaymentStatus(PaymentStatus.FAILED);
+            orderRepository.save(order);
             log.warn("Giao dịch VNPay thất bại cho đơn hàng ID: {}, ResponseCode: {}", orderId, vnp_ResponseCode);
             throw new AppException("PAYMENT_FAILED", "Thanh toán VNPay không thành công với mã phản hồi: " + vnp_ResponseCode);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentRecordResponse> getPayments() {
+        return orderRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
+                .stream().map(this::toRecord).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentRecordResponse getPayment(Long orderId, String username) {
+        return toRecord(findAccessibleOrder(orderId, username));
+    }
+
+    @Override
+    @Transactional
+    public QrPaymentResponse getQrPayment(Long orderId, String username) {
+        OrderEntity order = findAccessibleOrder(orderId, username);
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new AppException("PAYMENT_ALREADY_PAID", "Đơn hàng đã được thanh toán");
+        }
+        order.setPaymentMethod(PaymentMethod.VCB_QR);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+        orderRepository.save(order);
+        return QrPaymentResponse.builder().orderId(orderId).bankId(qrBankId).accountNumber(qrAccountNumber)
+                .accountName(qrAccountName).amount(order.getTotalFee())
+                .transferContent("THANHTOAN " + order.getTrackingNumber()).build();
+    }
+
+    @Override
+    @Transactional
+    public PaymentRecordResponse confirmPayment(Long orderId, String reference) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        order.setPaymentStatus(PaymentStatus.PAID);
+        order.setPaidAt(LocalDateTime.now());
+        order.setPaymentReference(reference == null || reference.isBlank() ? "MANUAL-" + orderId : reference.trim());
+        if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.PENDING) order.setStatus(OrderStatus.PAID);
+        return toRecord(orderRepository.save(order));
+    }
+
+    private OrderEntity findAccessibleOrder(Long orderId, String username) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy người dùng"));
+        if (user.getRole() != Role.ADMIN && user.getRole() != Role.STAFF && !user.getId().equals(order.getSenderId())) {
+            throw new AppException("PAYMENT_ACCESS_DENIED", "Bạn không có quyền xem thanh toán này");
+        }
+        return order;
+    }
+
+    private PaymentRecordResponse toRecord(OrderEntity order) {
+        return PaymentRecordResponse.builder().orderId(order.getId()).trackingNumber(order.getTrackingNumber())
+                .customerName(order.getSenderName()).amount(order.getTotalFee()).method(order.getPaymentMethod())
+                .status(order.getPaymentStatus()).paidAt(order.getPaidAt()).reference(order.getPaymentReference())
+                .createdAt(order.getCreatedAt()).build();
     }
 }

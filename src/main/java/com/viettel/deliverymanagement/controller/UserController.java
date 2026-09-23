@@ -4,6 +4,7 @@ import com.viettel.deliverymanagement.dto.request.ChangePasswordRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateProfileRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserSettingsRequest;
 import com.viettel.deliverymanagement.dto.request.UpsertUserAddressRequest;
+import com.viettel.deliverymanagement.dto.request.UpdateUserRoleRequest;
 import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
@@ -15,6 +16,7 @@ import com.viettel.deliverymanagement.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +37,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
+    @PreAuthorize("@permissionService.has(authentication, 'VIEW_USERS')")
     public ResponseData<List<UserDto>> getUsers() {
         List<UserDto> users = userRepository.findAll().stream()
                 .map(user -> UserDto.builder()
@@ -48,6 +51,14 @@ public class UserController {
                         .build())
                 .toList();
         return ResponseData.success("Lấy danh sách người dùng thành công", users);
+    }
+
+    @PutMapping("/{id}/role")
+    @PreAuthorize("@permissionService.has(authentication, 'MANAGE_ROLES')")
+    public ResponseData<UserDto> updateRole(Authentication authentication, @PathVariable Long id,
+                                             @Valid @RequestBody UpdateUserRoleRequest request) {
+        return ResponseData.success("Cập nhật vai trò thành công",
+                userService.updateRole(authentication.getName(), id, request.getRole()));
     }
 
     @GetMapping("/me")

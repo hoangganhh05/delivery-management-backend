@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -25,6 +26,7 @@ public class ShipmentController {
     private final ShipmentService shipmentService;
 
     @PostMapping("/shipments/assign")
+    @PreAuthorize("@permissionService.has(authentication, 'ASSIGN_SHIPPER')")
     @Operation(summary = "Phân công shipper cho đơn hàng", description = "Gán shipper cho đơn hàng ở trạng thái CREATED và chuyển trạng thái sang ASSIGNED")
     public ResponseData<Void> assignShipper(@Valid @RequestBody AssignShipperRequest request) {
         shipmentService.assignShipper(request);
@@ -32,6 +34,7 @@ public class ShipmentController {
     }
 
     @PutMapping("/shipments/orders/{orderId}/status")
+    @PreAuthorize("@permissionService.has(authentication, 'UPDATE_DELIVERY')")
     @Operation(summary = "Cập nhật trạng thái giao hàng", description = "Cập nhật trạng thái mới cho đơn hàng và ghi nhận lịch sử shipment")
     public ResponseData<Void> updateShipmentStatus(
             @PathVariable("orderId") Long orderId,

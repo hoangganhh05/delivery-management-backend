@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum Role {
     ADMIN("Quản trị viên"),
+    STAFF("Nhân viên vận hành"),
     SHIPPER("Nhân viên giao hàng"),
     CUSTOMER("Khách hàng");
 

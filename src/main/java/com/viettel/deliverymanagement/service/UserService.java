@@ -8,6 +8,8 @@ import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
+import com.viettel.deliverymanagement.dto.response.UserDto;
+import com.viettel.deliverymanagement.constant.Role;
 
 import java.util.List;
 
@@ -30,4 +32,6 @@ public interface UserService {
     UserAddressResponse setDefaultAddress(String username, Long addressId);
 
     UserSettingsResponse updateSettings(String username, UpdateUserSettingsRequest request);
+
+    UserDto updateRole(String actorUsername, Long userId, Role role);
 }

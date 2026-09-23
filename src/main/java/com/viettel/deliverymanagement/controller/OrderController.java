@@ -9,6 +9,7 @@ import com.viettel.deliverymanagement.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,17 +20,20 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
+    @PreAuthorize("@permissionService.has(authentication, 'CREATE_ORDER')")
     public ResponseData<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request, Authentication authentication) {
         OrderResponse response = orderService.createOrder(request, authentication.getName());
         return ResponseData.success("Tạo đơn hàng thành công", response);
     }
 
     @GetMapping
+    @PreAuthorize("@permissionService.has(authentication, 'VIEW_ORDERS')")
     public ResponseData<PageResponse<OrderResponse>> searchOrders(@Valid @ModelAttribute OrderSearchRequest request, Authentication authentication) {
         return ResponseData.success("Lấy danh sách đơn hàng thành công", orderService.searchOrders(request, authentication.getName()));
     }
 
     @GetMapping("/{trackingNumber}")
+    @PreAuthorize("@permissionService.has(authentication, 'VIEW_ORDERS')")
     public ResponseData<OrderResponse> getOrderByTrackingNumber(@PathVariable String trackingNumber, Authentication authentication) {
         return ResponseData.success(
                 "Lấy thông tin đơn hàng thành công",
@@ -38,6 +42,7 @@ public class OrderController {
     }
 
     @PutMapping("/{trackingNumber}/cancel")
+    @PreAuthorize("@permissionService.has(authentication, 'CANCEL_ORDER')")
     public ResponseData<OrderResponse> cancelOrder(@PathVariable String trackingNumber, Authentication authentication) {
         return ResponseData.success("Hủy đơn hàng thành công", orderService.cancelOrder(trackingNumber, authentication.getName()));
     }

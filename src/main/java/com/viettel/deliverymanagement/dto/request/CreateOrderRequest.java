@@ -1,5 +1,6 @@
 package com.viettel.deliverymanagement.dto.request;
 
+import com.viettel.deliverymanagement.constant.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -41,6 +42,8 @@ public class CreateOrderRequest {
     private BigDecimal shippingFee;
 
     private BigDecimal codAmount;
+
+    private PaymentMethod paymentMethod = PaymentMethod.COD;
 
     private String voucherCode;
 

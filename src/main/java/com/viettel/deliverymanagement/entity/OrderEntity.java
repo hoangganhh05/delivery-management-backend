@@ -1,6 +1,8 @@
 package com.viettel.deliverymanagement.entity;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -67,6 +69,20 @@ public class OrderEntity implements Serializable {
     @Column(name = "cod_amount", precision = 12, scale = 2)
     private BigDecimal codAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 20)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private PaymentStatus paymentStatus;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    @Column(name = "payment_reference", length = 100)
+    private String paymentReference;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -81,6 +97,12 @@ public class OrderEntity implements Serializable {
     void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (paymentMethod == null) {
+            paymentMethod = PaymentMethod.COD;
+        }
+        if (paymentStatus == null) {
+            paymentStatus = PaymentStatus.PENDING;
         }
     }
 }

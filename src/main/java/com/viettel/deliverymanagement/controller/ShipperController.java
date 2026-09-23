@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/shippers")
 @RequiredArgsConstructor
 @Tag(name = "Shipper Management", description = "APIs quản lý đội ngũ nhân viên giao hàng")
+@PreAuthorize("@permissionService.has(authentication, 'VIEW_SHIPPERS')")
 public class ShipperController {
 
     private final UserRepository userRepository;

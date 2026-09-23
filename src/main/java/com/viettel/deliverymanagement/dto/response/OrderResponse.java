@@ -1,6 +1,8 @@
 package com.viettel.deliverymanagement.dto.response;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -24,6 +26,10 @@ public class OrderResponse {
     private BigDecimal totalFee;
     private BigDecimal totalPrice;
     private BigDecimal codAmount;
+    private PaymentMethod paymentMethod;
+    private PaymentStatus paymentStatus;
+    private LocalDateTime paidAt;
+    private String paymentReference;
     private OrderStatus status;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
