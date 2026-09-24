@@ -57,6 +57,10 @@ public class OrderEntity implements Serializable {
     @Column(name = "shipping_fee", precision = 12, scale = 2)
     private BigDecimal shippingFee;
 
+    @Column(name = "service_type", nullable = false, length = 30)
+    @Builder.Default
+    private String serviceType = "STANDARD";
+
     @Column(name = "discount_fee", precision = 12, scale = 2)
     private BigDecimal discountFee;
 

@@ -33,6 +33,14 @@ public class VoucherController {
         return ResponseData.success("Lấy danh sách voucher thành công", voucherService.getVouchers());
     }
 
+    @GetMapping("/vouchers/active")
+    public ResponseData<List<VoucherEntity>> getActiveVouchers() {
+        return ResponseData.success(
+                "Lấy danh sách mã giảm giá đang áp dụng thành công",
+                voucherService.getActiveVouchers()
+        );
+    }
+
     @PostMapping("/vouchers/calculate")
     @Operation(
             summary = "Tính toán số tiền giảm giá của voucher",

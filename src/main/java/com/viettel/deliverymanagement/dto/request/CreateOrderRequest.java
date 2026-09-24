@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -40,6 +41,9 @@ public class CreateOrderRequest {
     @NotNull(message = "Phí vận chuyển không được để trống")
     @Positive(message = "Phí vận chuyển phải lớn hơn 0")
     private BigDecimal shippingFee;
+
+    @Pattern(regexp = "STANDARD|EXPRESS", message = "Gói giao hàng không hợp lệ")
+    private String serviceType = "STANDARD";
 
     private BigDecimal codAmount;
 

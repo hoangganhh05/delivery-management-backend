@@ -32,6 +32,17 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<VoucherEntity> getActiveVouchers() {
+        LocalDateTime now = LocalDateTime.now();
+        return voucherRepository.findByActiveTrueOrderByCreatedAtDesc().stream()
+                .filter(voucher -> voucher.getUsageLimit() == null || voucher.getUsageLimit() > 0)
+                .filter(voucher -> voucher.getStartDate() == null || !now.isBefore(voucher.getStartDate()))
+                .filter(voucher -> voucher.getEndDate() == null || !now.isAfter(voucher.getEndDate()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public VoucherCalculationResponse calculateDiscount(ApplyVoucherRequest request) {
         log.info("Bắt đầu tính toán giảm giá cho mã voucher: {} với giá trị đơn hàng: {}", 
                 request.getVoucherCode(), request.getOrderAmount());

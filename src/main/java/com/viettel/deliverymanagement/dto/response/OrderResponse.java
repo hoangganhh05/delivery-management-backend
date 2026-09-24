@@ -22,6 +22,7 @@ public class OrderResponse {
     private String receiverPhone;
     private String receiverAddress;
     private BigDecimal shippingFee;
+    private String serviceType;
     private BigDecimal discountFee;
     private BigDecimal totalFee;
     private BigDecimal totalPrice;

@@ -9,6 +9,7 @@ import java.util.List;
 public interface VoucherService {
     List<VoucherEntity> getVouchers();
 
+    List<VoucherEntity> getActiveVouchers();
 
     VoucherCalculationResponse calculateDiscount(ApplyVoucherRequest request);
 
