@@ -55,6 +55,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentResponse createVNPayPayment(Long orderId, HttpServletRequest req, String username) {
         log.info("Khởi tạo thanh toán VNPay cho đơn hàng ID: {}", orderId);
+        requireVNPayConfiguration();
 
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
@@ -67,7 +68,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
             throw new AppException("INVALID_PAYMENT_STATUS", "Đơn hàng không ở trạng thái có thể thanh toán");
         }
-        order.setPaymentMethod(PaymentMethod.VNPAY);
+        if (order.getPaymentMethod() != PaymentMethod.VNPAY || order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Đơn hàng không chọn thanh toán VNPay");
+        }
         order.setPaymentStatus(PaymentStatus.PENDING);
         orderRepository.save(order);
 
@@ -134,6 +137,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void processVNPayCallback(Map<String, String> queryParams) {
         log.info("Nhận callback kết quả giao dịch từ VNPay");
+        requireVNPayConfiguration();
 
         String vnp_SecureHash = queryParams.get("vnp_SecureHash");
         Map<String, String> fields = new HashMap<>();
@@ -145,8 +149,12 @@ public class PaymentServiceImpl implements PaymentService {
 
         String signValue = VNPayConfig.hashAllFields(fields, vnPayConfig.getVnpHashSecret());
         if (!signValue.equalsIgnoreCase(vnp_SecureHash)) {
-            log.error("Chữ ký VNPay không khớp: expected={}, actual={}", signValue, vnp_SecureHash);
+            log.warn("Từ chối callback VNPay có chữ ký không hợp lệ");
             throw new AppException("INVALID_CHECKSUM", "Chữ ký bảo mật giao dịch VNPay không hợp lệ");
+        }
+
+        if (!vnPayConfig.getVnpTmnCode().equals(queryParams.get("vnp_TmnCode"))) {
+            throw new AppException("INVALID_MERCHANT", "Thông tin đơn vị thanh toán không hợp lệ");
         }
 
         String vnp_ResponseCode = queryParams.get("vnp_ResponseCode");
@@ -157,8 +165,16 @@ public class PaymentServiceImpl implements PaymentService {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
 
-        if ("00".equals(vnp_ResponseCode)) {
-            if (order.getStatus() == OrderStatus.PAID) {
+        if (order.getPaymentMethod() != PaymentMethod.VNPAY) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Đơn hàng không chọn thanh toán VNPay");
+        }
+        String expectedAmount = order.getTotalFee().multiply(BigDecimal.valueOf(100)).toBigIntegerExact().toString();
+        if (!expectedAmount.equals(queryParams.get("vnp_Amount"))) {
+            throw new AppException("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không khớp với đơn hàng");
+        }
+
+        if ("00".equals(vnp_ResponseCode) && "00".equals(queryParams.get("vnp_TransactionStatus"))) {
+            if (order.getPaymentStatus() == PaymentStatus.PAID) {
                 log.info("Bỏ qua callback VNPay lặp lại cho đơn hàng ID: {}", orderId);
                 return;
             }
@@ -167,7 +183,6 @@ public class PaymentServiceImpl implements PaymentService {
             }
             log.info("Giao dịch VNPay thành công cho đơn hàng ID: {}, TransactionNo: {}", orderId, vnp_TransactionNo);
             order.setStatus(OrderStatus.PAID);
-            order.setPaymentMethod(PaymentMethod.VNPAY);
             order.setPaymentStatus(PaymentStatus.PAID);
             order.setPaidAt(LocalDateTime.now());
             order.setPaymentReference(vnp_TransactionNo);
@@ -182,11 +197,10 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
             shipmentRepository.save(shipment);
         } else {
-            order.setPaymentMethod(PaymentMethod.VNPAY);
+            if (order.getPaymentStatus() == PaymentStatus.PAID) return;
             order.setPaymentStatus(PaymentStatus.FAILED);
             orderRepository.save(order);
             log.warn("Giao dịch VNPay thất bại cho đơn hàng ID: {}, ResponseCode: {}", orderId, vnp_ResponseCode);
-            throw new AppException("PAYMENT_FAILED", "Thanh toán VNPay không thành công với mã phản hồi: " + vnp_ResponseCode);
         }
     }
 
@@ -207,10 +221,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public QrPaymentResponse getQrPayment(Long orderId, String username) {
         OrderEntity order = findAccessibleOrder(orderId, username);
+        if (order.getPaymentMethod() != PaymentMethod.VCB_QR) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Đơn hàng không chọn chuyển khoản ngân hàng");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.FAILED) {
+            throw new AppException("INVALID_PAYMENT_STATUS", "Yêu cầu thanh toán đã đóng");
+        }
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
             throw new AppException("PAYMENT_ALREADY_PAID", "Đơn hàng đã được thanh toán");
         }
-        order.setPaymentMethod(PaymentMethod.VCB_QR);
         order.setPaymentStatus(PaymentStatus.PENDING);
         orderRepository.save(order);
         return QrPaymentResponse.builder().orderId(orderId).bankId(qrBankId).accountNumber(qrAccountNumber)
@@ -223,9 +242,19 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentRecordResponse confirmPayment(Long orderId, String reference) {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        if (order.getPaymentMethod() != PaymentMethod.VCB_QR) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Chỉ có thể xác nhận thủ công chuyển khoản ngân hàng");
+        }
+        if (order.getPaymentStatus() == PaymentStatus.PAID) return toRecord(order);
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {
+            throw new AppException("INVALID_PAYMENT_STATUS", "Yêu cầu thanh toán không còn hiệu lực");
+        }
+        if (reference == null || reference.isBlank()) {
+            throw new AppException("PAYMENT_REFERENCE_REQUIRED", "Cần nhập mã giao dịch đã đối soát");
+        }
         order.setPaymentStatus(PaymentStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
-        order.setPaymentReference(reference == null || reference.isBlank() ? "MANUAL-" + orderId : reference.trim());
+        order.setPaymentReference(reference.trim());
         if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.PENDING) order.setStatus(OrderStatus.PAID);
         return toRecord(orderRepository.save(order));
     }
@@ -239,6 +268,14 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException("PAYMENT_ACCESS_DENIED", "Bạn không có quyền xem thanh toán này");
         }
         return order;
+    }
+
+    private void requireVNPayConfiguration() {
+        if (vnPayConfig.getVnpTmnCode() == null || vnPayConfig.getVnpTmnCode().isBlank()
+                || vnPayConfig.getVnpHashSecret() == null || vnPayConfig.getVnpHashSecret().isBlank()
+                || vnPayConfig.getVnpReturnUrl() == null || vnPayConfig.getVnpReturnUrl().isBlank()) {
+            throw new AppException("PAYMENT_GATEWAY_UNAVAILABLE", "Cổng thanh toán VNPay chưa được cấu hình");
+        }
     }
 
     private PaymentRecordResponse toRecord(OrderEntity order) {

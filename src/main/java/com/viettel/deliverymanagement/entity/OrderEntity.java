@@ -97,6 +97,12 @@ public class OrderEntity implements Serializable {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemEntity> items;
 
+    /** A transfer request is not a fulfillable order until payment is verified. */
+    public boolean isAwaitingOnlinePayment() {
+        return paymentMethod != null && paymentMethod != PaymentMethod.COD
+                && paymentStatus != PaymentStatus.PAID;
+    }
+
     @PrePersist
     void prePersist() {
         if (createdAt == null) {

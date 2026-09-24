@@ -1,6 +1,8 @@
 package com.viettel.deliverymanagement.repository;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -22,11 +24,21 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSp
 
     long countByStatusIn(Collection<OrderStatus> statuses);
 
+    @Query("SELECT COUNT(o) FROM OrderEntity o WHERE o.paymentMethod = :cod OR o.paymentStatus = :paid")
+    long countConfirmedOrders(@Param("cod") PaymentMethod cod, @Param("paid") PaymentStatus paid);
+
+    @Query("SELECT COUNT(o) FROM OrderEntity o WHERE o.status IN :statuses "
+            + "AND (o.paymentMethod = :cod OR o.paymentStatus = :paid)")
+    long countConfirmedOrdersByStatusIn(@Param("statuses") Collection<OrderStatus> statuses,
+            @Param("cod") PaymentMethod cod, @Param("paid") PaymentStatus paid);
+
     @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status = :status")
     BigDecimal sumTotalFeeByStatus(@Param("status") OrderStatus status);
 
-    @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status IN :statuses")
-    BigDecimal sumTotalFeeByStatusIn(@Param("statuses") Collection<OrderStatus> statuses);
+    @Query("SELECT COALESCE(SUM(o.totalFee), 0) FROM OrderEntity o WHERE o.status IN :statuses "
+            + "AND (o.paymentMethod = :cod OR o.paymentStatus = :paid)")
+    BigDecimal sumTotalFeeByStatusIn(@Param("statuses") Collection<OrderStatus> statuses,
+            @Param("cod") PaymentMethod cod, @Param("paid") PaymentStatus paid);
 
     List<OrderEntity> findByIdInOrderByIdDesc(List<Long> ids);
 }

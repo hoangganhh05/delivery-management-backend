@@ -59,7 +59,8 @@ public class ReportService {
     private List<OrderEntity> filtered(LocalDate from, LocalDate to) {
         return orderRepository.findAll().stream().filter(order -> order.getCreatedAt() != null
                 && !order.getCreatedAt().toLocalDate().isBefore(from)
-                && !order.getCreatedAt().toLocalDate().isAfter(to)).toList();
+                && !order.getCreatedAt().toLocalDate().isAfter(to)
+                && !order.isAwaitingOnlinePayment()).toList();
     }
 
     private BigDecimal paidRevenue(List<OrderEntity> orders) {

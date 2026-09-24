@@ -1,6 +1,8 @@
 package com.viettel.deliverymanagement.service;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.response.DashboardResponse;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.service.impl.DashboardServiceImpl;
@@ -26,10 +28,13 @@ class DashboardServiceImplTest {
 
     @Test
     void getDashboardStats_CountsEveryCompletedDeliveryStatus() {
-        when(orderRepository.count()).thenReturn(12L);
-        when(orderRepository.countByStatusIn(OrderStatus.deliveryCompletedStatuses())).thenReturn(7L);
-        when(orderRepository.countByStatus(OrderStatus.CANCELLED)).thenReturn(2L);
-        when(orderRepository.sumTotalFeeByStatusIn(OrderStatus.deliveryCompletedStatuses()))
+        when(orderRepository.countConfirmedOrders(PaymentMethod.COD, PaymentStatus.PAID)).thenReturn(12L);
+        when(orderRepository.countConfirmedOrdersByStatusIn(
+                OrderStatus.deliveryCompletedStatuses(), PaymentMethod.COD, PaymentStatus.PAID)).thenReturn(7L);
+        when(orderRepository.countConfirmedOrdersByStatusIn(
+                java.util.Set.of(OrderStatus.CANCELLED), PaymentMethod.COD, PaymentStatus.PAID)).thenReturn(2L);
+        when(orderRepository.sumTotalFeeByStatusIn(
+                OrderStatus.deliveryCompletedStatuses(), PaymentMethod.COD, PaymentStatus.PAID))
                 .thenReturn(BigDecimal.valueOf(560000));
 
         DashboardResponse response = dashboardService.getDashboardStats();

@@ -3,6 +3,7 @@ package com.viettel.deliverymanagement.service.impl;
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.constant.PaymentStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
@@ -53,10 +54,19 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, String username) {
         UserEntity currentUser = requireUser(username);
+        PaymentMethod paymentMethod = request.getPaymentMethod() == null ? PaymentMethod.COD : request.getPaymentMethod();
         // 1. Sinh mã vận đơn tự động (Tracking Number)
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        BigDecimal shippingFee = request.getShippingFee();
+        String serviceType = request.getServiceType() == null ? "STANDARD" : request.getServiceType();
+        BigDecimal shippingFee = switch (serviceType) {
+            case "STANDARD" -> BigDecimal.valueOf(30000);
+            case "EXPRESS" -> BigDecimal.valueOf(50000);
+            default -> throw new AppException("INVALID_SERVICE_TYPE", "Gói giao hàng không hợp lệ");
+        };
+        if (request.getShippingFee() == null || request.getShippingFee().compareTo(shippingFee) != 0) {
+            throw new AppException("SHIPPING_FEE_MISMATCH", "Phí giao hàng đã thay đổi, vui lòng tải lại và thử lại");
+        }
         BigDecimal discountFee = BigDecimal.ZERO;
         Long voucherId = null;
 
@@ -136,15 +146,15 @@ public class OrderServiceImpl implements OrderService {
                 .receiverAddress(request.getReceiverAddress())
                 .weightGram(request.getWeightGram())
                 .shippingFee(shippingFee)
-                .serviceType(request.getServiceType())
+                .serviceType(serviceType)
                 .discountFee(discountFee)
                 .voucherId(voucherId)
                 .totalFee(totalFee)
                 .totalPrice(totalPrice)
                 .codAmount(request.getCodAmount() != null ? request.getCodAmount() : BigDecimal.ZERO)
-                .paymentMethod(request.getPaymentMethod())
+                .paymentMethod(paymentMethod)
                 .paymentStatus(PaymentStatus.PENDING)
-                .status(OrderStatus.CREATED)
+                .status(paymentMethod == PaymentMethod.COD ? OrderStatus.CREATED : OrderStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -195,6 +205,14 @@ public class OrderServiceImpl implements OrderService {
                 assignedOrders.select(shipment.get("orderId"))
                         .where(cb.equal(shipment.get("shipperId"), currentUser.getId()));
                 predicates.add(root.get("id").in(assignedOrders));
+            }
+
+            // Customers can resume their payment requests. Operational lists cannot.
+            if (currentUser.getRole() != Role.CUSTOMER) {
+                predicates.add(cb.or(
+                        cb.equal(root.get("paymentMethod"), PaymentMethod.COD),
+                        cb.equal(root.get("paymentStatus"), PaymentStatus.PAID)
+                ));
             }
 
             if (request.getStatus() != null) {

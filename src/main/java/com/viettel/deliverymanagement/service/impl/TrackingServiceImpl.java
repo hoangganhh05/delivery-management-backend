@@ -35,6 +35,10 @@ public class TrackingServiceImpl implements TrackingService {
         OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với mã vận đơn: " + trackingNumber));
 
+        if (order.isAwaitingOnlinePayment()) {
+            throw new AppException("ORDER_NOT_FOUND", "Mã vận đơn chỉ có thể tra cứu sau khi thanh toán được xác nhận");
+        }
+
         List<ShipmentEntity> shipments = shipmentRepository.findByOrderIdOrderByIdDesc(order.getId());
         UserEntity shipper = shipmentRepository
                 .findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(order.getId())

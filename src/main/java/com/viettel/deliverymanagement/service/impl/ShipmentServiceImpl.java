@@ -44,6 +44,10 @@ public class ShipmentServiceImpl implements ShipmentService {
             throw new AppException("INVALID_SHIPPER", "Tài khoản được chọn không phải shipper đang hoạt động");
         }
 
+        if (order.isAwaitingOnlinePayment()) {
+            throw new AppException("PAYMENT_REQUIRED", "Cần xác nhận thanh toán trước khi phân công giao hàng");
+        }
+
         if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PAID) {
             log.warn("Không thể phân công đơn hàng ID {}. Trạng thái hiện tại: {}", order.getId(), order.getStatus());
             throw new AppException("INVALID_ORDER_STATUS", "Chỉ có thể phân công đơn hàng mới hoặc đã thanh toán");

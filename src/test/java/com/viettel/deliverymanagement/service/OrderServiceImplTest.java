@@ -1,6 +1,8 @@
 package com.viettel.deliverymanagement.service;
 
 import com.viettel.deliverymanagement.constant.OrderStatus;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
@@ -58,7 +60,7 @@ class OrderServiceImplTest {
         request.setReceiverPhone("0912345678");
         request.setReceiverAddress("Số 10 Pham Van Dong, Cau Giay, Ha Noi");
         request.setWeightGram(1200);
-        request.setShippingFee(BigDecimal.valueOf(35000));
+        request.setShippingFee(BigDecimal.valueOf(30000));
         request.setCodAmount(BigDecimal.valueOf(200000));
 
         OrderItemRequest itemRequest = new OrderItemRequest();
@@ -102,7 +104,7 @@ class OrderServiceImplTest {
         assertEquals("0987654321", response.getSenderPhone());
         assertEquals("Tran Thi B", response.getReceiverName());
         assertEquals("0912345678", response.getReceiverPhone());
-        assertEquals(BigDecimal.valueOf(35000), response.getTotalFee());
+        assertEquals(BigDecimal.valueOf(30000), response.getTotalFee());
         assertEquals(BigDecimal.valueOf(200000), response.getTotalPrice());
         assertNull(response.getCreatedAt());
 
@@ -166,6 +168,47 @@ class OrderServiceImplTest {
         assertTrue(exception.getMessage().contains(nonExistentTrackingNumber));
 
         verify(orderRepository, times(1)).findByTrackingNumber(nonExistentTrackingNumber);
+    }
+
+    @Test
+    @DisplayName("Chuyển khoản chưa xác nhận chỉ tạo yêu cầu chờ thanh toán")
+    void createOrder_BankTransferAwaitsPayment() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setSenderName("Nguyen Van A");
+        request.setSenderPhone("0987654321");
+        request.setSenderAddress("Ha Noi");
+        request.setReceiverName("Tran Thi B");
+        request.setReceiverPhone("0912345678");
+        request.setReceiverAddress("Da Nang");
+        request.setWeightGram(500);
+        request.setShippingFee(BigDecimal.valueOf(30000));
+        request.setPaymentMethod(PaymentMethod.VCB_QR);
+
+        when(userRepository.findByUsername("customer"))
+                .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> {
+            OrderEntity order = invocation.getArgument(0);
+            order.setId(3L);
+            return order;
+        });
+
+        OrderResponse response = orderService.createOrder(request, "customer");
+
+        assertEquals(OrderStatus.PENDING, response.getStatus());
+        assertEquals(PaymentStatus.PENDING, response.getPaymentStatus());
+        assertEquals(PaymentMethod.VCB_QR, response.getPaymentMethod());
+    }
+
+    @Test
+    void createOrder_RejectsClientManipulatedShippingFee() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setServiceType("STANDARD");
+        request.setShippingFee(BigDecimal.ONE);
+        when(userRepository.findByUsername("customer"))
+                .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+
+        assertThrows(AppException.class, () -> orderService.createOrder(request, "customer"));
+        verify(orderRepository, never()).save(any(OrderEntity.class));
     }
 
     @Test
