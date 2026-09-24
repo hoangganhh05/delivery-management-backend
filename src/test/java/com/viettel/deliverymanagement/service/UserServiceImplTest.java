@@ -105,13 +105,13 @@ class UserServiceImplTest {
         user.setPassword("old-hash");
         ChangePasswordRequest request = ChangePasswordRequest.builder()
                 .currentPassword("old-password")
-                .newPassword("new-password-123")
-                .confirmPassword("new-password-123")
+                .newPassword("New-password-123")
+                .confirmPassword("New-password-123")
                 .build();
         when(userRepository.findByUsernameForUpdate("customer")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("old-password", "old-hash")).thenReturn(true);
-        when(passwordEncoder.matches("new-password-123", "old-hash")).thenReturn(false);
-        when(passwordEncoder.encode("new-password-123")).thenReturn("new-hash");
+        when(passwordEncoder.matches("New-password-123", "old-hash")).thenReturn(false);
+        when(passwordEncoder.encode("New-password-123")).thenReturn("new-hash");
 
         PasswordChangeResponse response = userService.changePassword("customer", request);
 
@@ -129,8 +129,8 @@ class UserServiceImplTest {
         user.setPassword("old-hash");
         ChangePasswordRequest request = ChangePasswordRequest.builder()
                 .currentPassword("wrong-password")
-                .newPassword("new-password-123")
-                .confirmPassword("new-password-123")
+                .newPassword("New-password-123")
+                .confirmPassword("New-password-123")
                 .build();
         when(userRepository.findByUsernameForUpdate("customer")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "old-hash")).thenReturn(false);

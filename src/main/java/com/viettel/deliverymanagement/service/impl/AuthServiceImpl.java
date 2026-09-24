@@ -36,7 +36,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        PasswordPolicy.requireBcryptCompatible(request.getPassword());
+        PasswordPolicy.requireStrongPassword(request.getPassword());
         String username = request.getUsername().trim();
         String fullName = (request.getFullName() != null && !request.getFullName().trim().isEmpty())
                 ? request.getFullName().trim()

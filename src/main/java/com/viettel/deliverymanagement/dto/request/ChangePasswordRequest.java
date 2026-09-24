@@ -2,6 +2,7 @@ package com.viettel.deliverymanagement.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +22,10 @@ public class ChangePasswordRequest {
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
     @Size(min = 8, max = 72, message = "Mật khẩu mới phải có từ 8 đến 72 ký tự")
+    @Pattern(
+            regexp = "(?s)^(?=.*\\p{Lu})(?=.*[^\\p{L}\\p{N}]).*$",
+            message = "Mật khẩu mới phải có ít nhất 1 chữ hoa và 1 ký tự đặc biệt"
+    )
     private String newPassword;
 
     @NotBlank(message = "Xác nhận mật khẩu không được để trống")

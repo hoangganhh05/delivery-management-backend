@@ -78,7 +78,7 @@ public class UserServiceImpl implements UserService {
     public PasswordChangeResponse changePassword(String username, ChangePasswordRequest request) {
         UserEntity user = findUserForUpdate(username);
         PasswordPolicy.requireBcryptCompatible(request.getCurrentPassword());
-        PasswordPolicy.requireBcryptCompatible(request.getNewPassword());
+        PasswordPolicy.requireStrongPassword(request.getNewPassword());
         PasswordPolicy.requireBcryptCompatible(request.getConfirmPassword());
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new AppException("CURRENT_PASSWORD_INVALID", "Mật khẩu hiện tại không chính xác");

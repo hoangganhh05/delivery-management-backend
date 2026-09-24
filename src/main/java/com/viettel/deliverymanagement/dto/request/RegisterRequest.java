@@ -33,7 +33,11 @@ public class RegisterRequest {
 
     @Schema(description = "Mật khẩu tài khoản", example = "Password@123")
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, max = 72, message = "Mật khẩu phải có từ 6 đến 72 ký tự")
+    @Size(min = 8, max = 72, message = "Mật khẩu phải có từ 8 đến 72 ký tự")
+    @Pattern(
+            regexp = "(?s)^(?=.*\\p{Lu})(?=.*[^\\p{L}\\p{N}]).*$",
+            message = "Mật khẩu phải có ít nhất 1 chữ hoa và 1 ký tự đặc biệt"
+    )
     @JsonProperty("password")
     private String password;
 
