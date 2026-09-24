@@ -24,14 +24,23 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+
+    private static final long MAX_AVATAR_BYTES = 1_500_000;
+    private static final Set<String> ALLOWED_AVATAR_TYPES = Set.of("image/jpeg", "image/png");
 
     private final UserRepository userRepository;
     private final UserAddressRepository userAddressRepository;
@@ -63,13 +72,61 @@ public class UserServiceImpl implements UserService {
         user.setPhoneNumber(phoneNumber);
         user.setDateOfBirth(request.getDateOfBirth());
         user.setGender(request.getGender());
-        user.setAvatarUrl(trimToNull(request.getAvatarUrl()));
+        String avatarUrl = trimToNull(request.getAvatarUrl());
+        // An uploaded avatar is stored separately. A blank URL should not erase it
+        // when the user merely edits their name, email, or phone number.
+        if (avatarUrl != null) {
+            user.setAvatarUrl(avatarUrl);
+            user.setAvatarData(null);
+        }
 
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
             throw new AppException("PROFILE_CONFLICT", "Email hoặc số điện thoại đã được sử dụng");
         }
+        return toUserMe(user);
+    }
+
+    @Override
+    @Transactional
+    public UserMeResponse updateAvatar(String username, MultipartFile avatar) {
+        if (avatar == null || avatar.isEmpty()) {
+            throw new AppException("AVATAR_REQUIRED", "Vui lòng chọn ảnh đại diện");
+        }
+        if (avatar.getSize() > MAX_AVATAR_BYTES) {
+            throw new AppException("AVATAR_TOO_LARGE", "Ảnh đại diện tối đa 1,5 MB");
+        }
+        String contentType = avatar.getContentType();
+        if (contentType == null || !ALLOWED_AVATAR_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new AppException("AVATAR_UNSUPPORTED", "Chỉ hỗ trợ ảnh JPG hoặc PNG");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = avatar.getBytes();
+            if (ImageIO.read(new ByteArrayInputStream(bytes)) == null) {
+                throw new AppException("AVATAR_INVALID", "Tệp đã chọn không phải là ảnh hợp lệ");
+            }
+        } catch (IOException exception) {
+            throw new AppException("AVATAR_READ_FAILED", "Không thể đọc tệp ảnh đã chọn");
+        }
+
+        UserEntity user = findUserForUpdate(username);
+        user.setAvatarData("data:" + contentType.toLowerCase(Locale.ROOT) + ";base64,"
+                + Base64.getEncoder().encodeToString(bytes));
+        user.setAvatarUrl(null);
+        userRepository.saveAndFlush(user);
+        return toUserMe(user);
+    }
+
+    @Override
+    @Transactional
+    public UserMeResponse removeAvatar(String username) {
+        UserEntity user = findUserForUpdate(username);
+        user.setAvatarUrl(null);
+        user.setAvatarData(null);
+        userRepository.saveAndFlush(user);
         return toUserMe(user);
     }
 
@@ -253,7 +310,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(user.getPhoneNumber())
                 .dateOfBirth(user.getDateOfBirth())
                 .gender(user.getGender())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(trimToNull(user.getAvatarData()) != null ? user.getAvatarData() : user.getAvatarUrl())
                 .role(user.getRole())
                 .status(user.getStatus())
                 .addresses(findAddressResponses(user.getId()))

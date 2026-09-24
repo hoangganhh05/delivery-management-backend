@@ -15,6 +15,7 @@ import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,7 +25,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -77,6 +80,25 @@ public class UserController {
         return ResponseData.success(
                 "Cập nhật thông tin cá nhân thành công",
                 userService.updateProfile(authentication.getName(), request)
+        );
+    }
+
+    @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseData<UserMeResponse> updateAvatar(
+            Authentication authentication,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseData.success(
+                "Cập nhật ảnh đại diện thành công",
+                userService.updateAvatar(authentication.getName(), file)
+        );
+    }
+
+    @DeleteMapping("/avatar")
+    public ResponseData<UserMeResponse> removeAvatar(Authentication authentication) {
+        return ResponseData.success(
+                "Đã xóa ảnh đại diện",
+                userService.removeAvatar(authentication.getName())
         );
     }
 

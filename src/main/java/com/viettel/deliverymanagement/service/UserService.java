@@ -10,6 +10,7 @@ import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
 import com.viettel.deliverymanagement.dto.response.UserDto;
 import com.viettel.deliverymanagement.constant.Role;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -18,6 +19,10 @@ public interface UserService {
     UserMeResponse getCurrentUser(String username);
 
     UserMeResponse updateProfile(String username, UpdateProfileRequest request);
+
+    UserMeResponse updateAvatar(String username, MultipartFile avatar);
+
+    UserMeResponse removeAvatar(String username);
 
     PasswordChangeResponse changePassword(String username, ChangePasswordRequest request);
 

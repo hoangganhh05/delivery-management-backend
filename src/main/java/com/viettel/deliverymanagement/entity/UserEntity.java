@@ -53,6 +53,11 @@ public class UserEntity implements Serializable {
     @Column(name = "avatar_url", length = 1024)
     private String avatarUrl;
 
+    /** A compact data URL produced by the account avatar uploader. */
+    @Lob
+    @Column(name = "avatar_data", columnDefinition = "MEDIUMTEXT")
+    private String avatarData;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20, columnDefinition = "VARCHAR(20)")
     private Role role;
