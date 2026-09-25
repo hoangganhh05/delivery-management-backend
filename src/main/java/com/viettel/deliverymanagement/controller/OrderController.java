@@ -6,6 +6,7 @@ import com.viettel.deliverymanagement.dto.response.OrderResponse;
 import com.viettel.deliverymanagement.dto.response.PageResponse;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
 import com.viettel.deliverymanagement.service.OrderService;
+import com.viettel.deliverymanagement.service.ShipmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ShipmentService shipmentService;
 
     @PostMapping
     @PreAuthorize("@permissionService.has(authentication, 'CREATE_ORDER')")
@@ -39,6 +41,15 @@ public class OrderController {
                 "Lấy thông tin đơn hàng thành công",
                 orderService.getOrderByTrackingNumber(trackingNumber, authentication.getName())
         );
+    }
+
+    @GetMapping("/{trackingNumber}/location")
+    @PreAuthorize("@permissionService.has(authentication, 'VIEW_ORDERS')")
+    public ResponseData<com.viettel.deliverymanagement.dto.response.DriverLocationResponse> getLiveDriverLocation(
+            @PathVariable String trackingNumber,
+            Authentication authentication) {
+        OrderResponse order = orderService.getOrderByTrackingNumber(trackingNumber, authentication.getName());
+        return ResponseData.success("Lấy vị trí tài xế thành công", shipmentService.getLatestLocation(order.getId()));
     }
 
     @PutMapping("/{trackingNumber}/cancel")

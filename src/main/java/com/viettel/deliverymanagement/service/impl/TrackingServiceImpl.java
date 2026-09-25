@@ -48,11 +48,6 @@ public class TrackingServiceImpl implements TrackingService {
                 ? null
                 : (shipper.getFullName() != null ? shipper.getFullName() : shipper.getUsername());
         String shipperPhone = shipper == null ? null : shipper.getPhoneNumber();
-        ShipmentEntity latestShipment = shipments.isEmpty() ? null : shipments.get(0);
-        boolean locationVisible = order.getStatus() == com.viettel.deliverymanagement.constant.OrderStatus.ASSIGNED
-                || order.getStatus() == com.viettel.deliverymanagement.constant.OrderStatus.PICKED_UP
-                || order.getStatus() == com.viettel.deliverymanagement.constant.OrderStatus.IN_TRANSIT
-                || order.getStatus() == com.viettel.deliverymanagement.constant.OrderStatus.SHIPPING;
 
         List<ShipmentHistoryDto> historyList = shipments.stream()
                 .map(shipment -> ShipmentHistoryDto.builder()
@@ -73,15 +68,6 @@ public class TrackingServiceImpl implements TrackingService {
                 .receiverAddress(order.getReceiverAddress())
                 .shipperName(shipperName)
                 .shipperPhone(shipperPhone)
-                .shipperAvatarUrl(shipper == null
-                        ? null
-                        : (shipper.getAvatarData() != null && !shipper.getAvatarData().isBlank()
-                        ? shipper.getAvatarData() : shipper.getAvatarUrl()))
-                .driverLatitude(locationVisible && latestShipment != null ? latestShipment.getCurrentLatitude() : null)
-                .driverLongitude(locationVisible && latestShipment != null ? latestShipment.getCurrentLongitude() : null)
-                .driverAccuracyMeters(locationVisible && latestShipment != null ? latestShipment.getCurrentAccuracyMeters() : null)
-                .driverLocationUpdatedAt(locationVisible && latestShipment != null ? latestShipment.getLocationUpdatedAt() : null)
-                .driverLocationReportedAt(locationVisible && latestShipment != null ? latestShipment.getLocationReportedAt() : null)
                 .currentStatus(order.getStatus())
                 .shippingFee(order.getShippingFee())
                 .codAmount(order.getCodAmount())

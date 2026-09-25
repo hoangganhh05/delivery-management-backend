@@ -3,6 +3,7 @@ package com.viettel.deliverymanagement.service;
 import com.viettel.deliverymanagement.dto.request.AssignShipperRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentLocationRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentStatusRequest;
+import com.viettel.deliverymanagement.dto.response.DriverLocationResponse;
 
 public interface ShipmentService {
 
@@ -11,4 +12,6 @@ public interface ShipmentService {
     void updateShipmentStatus(Long orderId, UpdateShipmentStatusRequest request, String username);
 
     void updateShipmentLocation(Long orderId, UpdateShipmentLocationRequest request, String username);
+
+    DriverLocationResponse getLatestLocation(Long orderId);
 }

@@ -177,6 +177,30 @@ public class ShipmentServiceImpl implements ShipmentService {
         shipmentRepository.save(assignment);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public com.viettel.deliverymanagement.dto.response.DriverLocationResponse getLatestLocation(Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
+        boolean activeDelivery = order.getStatus() == OrderStatus.ASSIGNED
+                || order.getStatus() == OrderStatus.PICKED_UP
+                || order.getStatus() == OrderStatus.IN_TRANSIT
+                || order.getStatus() == OrderStatus.SHIPPING;
+        if (!activeDelivery) return null;
+
+        ShipmentEntity latest = shipmentRepository.findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(orderId)
+                .orElse(null);
+        if (latest == null || latest.getCurrentLatitude() == null || latest.getCurrentLongitude() == null) return null;
+        return com.viettel.deliverymanagement.dto.response.DriverLocationResponse.builder()
+                .orderId(orderId)
+                .latitude(latest.getCurrentLatitude())
+                .longitude(latest.getCurrentLongitude())
+                .accuracyMeters(latest.getCurrentAccuracyMeters())
+                .reportedAt(latest.getLocationReportedAt())
+                .receivedAt(latest.getLocationUpdatedAt())
+                .build();
+    }
+
     private void validateTransition(OrderStatus current, OrderStatus next) {
         boolean valid = switch (current) {
             case ASSIGNED -> next == OrderStatus.PICKED_UP;

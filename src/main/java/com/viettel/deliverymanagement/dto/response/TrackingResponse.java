@@ -38,18 +38,6 @@ public class TrackingResponse implements Serializable {
     @Schema(description = "Số điện thoại liên hệ của shipper", example = "0901234567")
     private String shipperPhone;
 
-    private String shipperAvatarUrl;
-
-    private BigDecimal driverLatitude;
-
-    private BigDecimal driverLongitude;
-
-    private BigDecimal driverAccuracyMeters;
-
-    private LocalDateTime driverLocationUpdatedAt;
-
-    private LocalDateTime driverLocationReportedAt;
-
     @Schema(description = "Trạng thái hiện tại của đơn hàng", example = "IN_TRANSIT")
     private OrderStatus currentStatus;
 
