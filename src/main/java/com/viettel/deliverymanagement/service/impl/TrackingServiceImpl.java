@@ -81,6 +81,7 @@ public class TrackingServiceImpl implements TrackingService {
                 .driverLongitude(locationVisible && latestShipment != null ? latestShipment.getCurrentLongitude() : null)
                 .driverAccuracyMeters(locationVisible && latestShipment != null ? latestShipment.getCurrentAccuracyMeters() : null)
                 .driverLocationUpdatedAt(locationVisible && latestShipment != null ? latestShipment.getLocationUpdatedAt() : null)
+                .driverLocationReportedAt(locationVisible && latestShipment != null ? latestShipment.getLocationReportedAt() : null)
                 .currentStatus(order.getStatus())
                 .shippingFee(order.getShippingFee())
                 .codAmount(order.getCodAmount())

@@ -48,6 +48,8 @@ public class TrackingResponse implements Serializable {
 
     private LocalDateTime driverLocationUpdatedAt;
 
+    private LocalDateTime driverLocationReportedAt;
+
     @Schema(description = "Trạng thái hiện tại của đơn hàng", example = "IN_TRANSIT")
     private OrderStatus currentStatus;
 

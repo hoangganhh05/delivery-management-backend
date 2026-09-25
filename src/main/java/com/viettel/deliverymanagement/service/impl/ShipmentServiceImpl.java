@@ -124,6 +124,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .currentLongitude(assignment.getCurrentLongitude())
                 .currentAccuracyMeters(assignment.getCurrentAccuracyMeters())
                 .locationUpdatedAt(assignment.getLocationUpdatedAt())
+                .locationReportedAt(assignment.getLocationReportedAt())
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
 
@@ -170,6 +171,9 @@ public class ShipmentServiceImpl implements ShipmentService {
         assignment.setCurrentLongitude(request.getLongitude());
         assignment.setCurrentAccuracyMeters(request.getAccuracy());
         assignment.setLocationUpdatedAt(java.time.LocalDateTime.now());
+        assignment.setLocationReportedAt(request.getTimestamp() == null
+                ? assignment.getLocationUpdatedAt()
+                : java.time.LocalDateTime.ofInstant(request.getTimestamp(), java.time.ZoneOffset.UTC));
         shipmentRepository.save(assignment);
     }
 

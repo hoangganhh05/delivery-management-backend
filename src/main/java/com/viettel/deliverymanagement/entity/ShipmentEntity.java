@@ -49,6 +49,9 @@ public class ShipmentEntity implements Serializable {
     @Column(name = "location_updated_at")
     private LocalDateTime locationUpdatedAt;
 
+    @Column(name = "location_reported_at")
+    private LocalDateTime locationReportedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
