@@ -5,6 +5,7 @@ import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.constant.PaymentMethod;
 import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.request.AssignShipperRequest;
+import com.viettel.deliverymanagement.dto.request.UpdateShipmentLocationRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentStatusRequest;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
@@ -119,6 +120,10 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .status(request.getStatus())
                 .note(request.getNote())
                 .proofImageUrl(request.getProofImageUrl())
+                .currentLatitude(assignment.getCurrentLatitude())
+                .currentLongitude(assignment.getCurrentLongitude())
+                .currentAccuracyMeters(assignment.getCurrentAccuracyMeters())
+                .locationUpdatedAt(assignment.getLocationUpdatedAt())
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
 
@@ -138,6 +143,34 @@ public class ShipmentServiceImpl implements ShipmentService {
         } catch (Exception e) {
             log.warn("Không thể tạo thông báo: {}", e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public void updateShipmentLocation(Long orderId, UpdateShipmentLocationRequest request, String username) {
+        UserEntity actor = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+        ShipmentEntity assignment = shipmentRepository
+                .findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(orderId)
+                .orElseThrow(() -> new AppException("SHIPMENT_NOT_ASSIGNED", "Đơn hàng chưa được phân công shipper"));
+
+        if (actor.getRole() == Role.SHIPPER && !actor.getId().equals(assignment.getShipperId())) {
+            throw new AppException("SHIPMENT_ACCESS_DENIED", "Bạn không được cập nhật vị trí cho đơn hàng này");
+        }
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng với ID: " + orderId));
+        if (!(order.getStatus() == OrderStatus.ASSIGNED
+                || order.getStatus() == OrderStatus.PICKED_UP
+                || order.getStatus() == OrderStatus.IN_TRANSIT
+                || order.getStatus() == OrderStatus.SHIPPING)) {
+            throw new AppException("INVALID_ORDER_STATUS", "Chỉ cập nhật vị trí khi đơn đang được giao");
+        }
+
+        assignment.setCurrentLatitude(request.getLatitude());
+        assignment.setCurrentLongitude(request.getLongitude());
+        assignment.setCurrentAccuracyMeters(request.getAccuracy());
+        assignment.setLocationUpdatedAt(java.time.LocalDateTime.now());
+        shipmentRepository.save(assignment);
     }
 
     private void validateTransition(OrderStatus current, OrderStatus next) {

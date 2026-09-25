@@ -1,6 +1,7 @@
 package com.viettel.deliverymanagement.controller;
 
 import com.viettel.deliverymanagement.dto.request.AssignShipperRequest;
+import com.viettel.deliverymanagement.dto.request.UpdateShipmentLocationRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateShipmentStatusRequest;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
 import com.viettel.deliverymanagement.service.ShipmentService;
@@ -42,5 +43,16 @@ public class ShipmentController {
             Authentication authentication) {
         shipmentService.updateShipmentStatus(orderId, request, authentication.getName());
         return ResponseData.success("Cập nhật trạng thái giao hàng thành công", null);
+    }
+
+    @PutMapping("/shipments/orders/{orderId}/location")
+    @PreAuthorize("@permissionService.has(authentication, 'UPDATE_DELIVERY')")
+    @Operation(summary = "Cập nhật vị trí GPS shipper", description = "Lưu vị trí mới nhất từ thiết bị của shipper được phân công")
+    public ResponseData<Void> updateShipmentLocation(
+            @PathVariable("orderId") Long orderId,
+            @Valid @RequestBody UpdateShipmentLocationRequest request,
+            Authentication authentication) {
+        shipmentService.updateShipmentLocation(orderId, request, authentication.getName());
+        return ResponseData.success("Đã cập nhật vị trí GPS", null);
     }
 }

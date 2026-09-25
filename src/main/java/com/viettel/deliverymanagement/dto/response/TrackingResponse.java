@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -30,10 +31,22 @@ public class TrackingResponse implements Serializable {
     @Schema(description = "Tên người nhận", example = "Trần Thị B")
     private String receiverName;
 
+    private String receiverAddress;
+
     private String shipperName;
 
     @Schema(description = "Số điện thoại liên hệ của shipper", example = "0901234567")
     private String shipperPhone;
+
+    private String shipperAvatarUrl;
+
+    private BigDecimal driverLatitude;
+
+    private BigDecimal driverLongitude;
+
+    private BigDecimal driverAccuracyMeters;
+
+    private LocalDateTime driverLocationUpdatedAt;
 
     @Schema(description = "Trạng thái hiện tại của đơn hàng", example = "IN_TRANSIT")
     private OrderStatus currentStatus;
