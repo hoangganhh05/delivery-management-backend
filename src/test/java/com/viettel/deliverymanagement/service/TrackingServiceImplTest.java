@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +39,7 @@ class TrackingServiceImplTest {
     private TrackingServiceImpl trackingService;
 
     @Test
-    void trackOrder_ReturnsAssignedShipperContactDetails() {
+    void trackOrder_PublicResponseMasksPrivateDetails() {
         OrderEntity order = OrderEntity.builder()
                 .trackingNumber("VT12345678")
                 .senderName("Nguyen Van A")
@@ -68,7 +69,35 @@ class TrackingServiceImplTest {
 
         TrackingResponse response = trackingService.trackOrder("VT12345678");
 
+        assertEquals("N*** V*** N***", response.getShipperName());
+        assertNull(response.getShipperPhone());
+    }
+
+    @Test
+    void trackOrder_AuthenticatedResponseIncludesOperationalDetails() {
+        OrderEntity order = OrderEntity.builder()
+                .trackingNumber("VT12345678")
+                .senderName("Nguyen Van A")
+                .receiverName("Tran Thi B")
+                .receiverAddress("12 Le Loi, Phuong Ben Nghe, Ho Chi Minh")
+                .status(OrderStatus.IN_TRANSIT)
+                .build();
+        order.setId(1L);
+        ShipmentEntity shipment = ShipmentEntity.builder().orderId(1L).shipperId(9L)
+                .status(OrderStatus.IN_TRANSIT).createdAt(LocalDateTime.now()).build();
+        UserEntity shipper = UserEntity.builder().username("shipper_nam")
+                .fullName("Nguyen Van Nam").phoneNumber("0901234567").build();
+
+        when(orderRepository.findByTrackingNumber("VT12345678")).thenReturn(Optional.of(order));
+        when(shipmentRepository.findByOrderIdOrderByIdDesc(1L)).thenReturn(List.of(shipment));
+        when(shipmentRepository.findFirstByOrderIdAndShipperIdIsNotNullOrderByIdDesc(1L))
+                .thenReturn(Optional.of(shipment));
+        when(userRepository.findById(9L)).thenReturn(Optional.of(shipper));
+
+        TrackingResponse response = trackingService.trackOrder("VT12345678", true);
+
         assertEquals("Nguyen Van Nam", response.getShipperName());
         assertEquals("0901234567", response.getShipperPhone());
+        assertEquals("12 Le Loi, Phuong Ben Nghe, Ho Chi Minh", response.getReceiverAddress());
     }
 }

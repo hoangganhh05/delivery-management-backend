@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/tracking")
@@ -24,8 +26,13 @@ public class TrackingController {
             summary = "Tra cứu hành trình đơn hàng công khai",
             description = "Tra cứu thông tin chi tiết và toàn bộ lịch sử trạng thái của đơn hàng bằng mã vận đơn mà không cần đăng nhập"
     )
-    public ResponseData<TrackingResponse> trackOrder(@PathVariable("trackingNumber") String trackingNumber) {
-        TrackingResponse response = trackingService.trackOrder(trackingNumber);
+    public ResponseData<TrackingResponse> trackOrder(
+            @PathVariable("trackingNumber") String trackingNumber,
+            Authentication authentication) {
+        boolean includePrivateDetails = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        TrackingResponse response = trackingService.trackOrder(trackingNumber, includePrivateDetails);
         return ResponseData.success("Tra cứu hành trình đơn hàng thành công", response);
     }
 }

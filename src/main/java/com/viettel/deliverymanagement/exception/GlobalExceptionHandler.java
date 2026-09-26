@@ -101,6 +101,9 @@ public class GlobalExceptionHandler {
         if (code.endsWith("ALREADY_EXISTS") || code.endsWith("CONFLICT")) {
             return HttpStatus.CONFLICT;
         }
+        if (code.endsWith("_UNAVAILABLE")) {
+            return HttpStatus.SERVICE_UNAVAILABLE;
+        }
         return HttpStatus.BAD_REQUEST;
     }
 }

@@ -170,7 +170,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         assignment.setCurrentLatitude(request.getLatitude());
         assignment.setCurrentLongitude(request.getLongitude());
         assignment.setCurrentAccuracyMeters(request.getAccuracy());
-        assignment.setLocationUpdatedAt(java.time.LocalDateTime.now());
+        assignment.setLocationUpdatedAt(java.time.LocalDateTime.now(java.time.Clock.systemUTC()));
         assignment.setLocationReportedAt(request.getTimestamp() == null
                 ? assignment.getLocationUpdatedAt()
                 : java.time.LocalDateTime.ofInstant(request.getTimestamp(), java.time.ZoneOffset.UTC));
@@ -196,9 +196,13 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .latitude(latest.getCurrentLatitude())
                 .longitude(latest.getCurrentLongitude())
                 .accuracyMeters(latest.getCurrentAccuracyMeters())
-                .reportedAt(latest.getLocationReportedAt())
-                .receivedAt(latest.getLocationUpdatedAt())
+                .reportedAt(toUtcInstant(latest.getLocationReportedAt()))
+                .receivedAt(toUtcInstant(latest.getLocationUpdatedAt()))
                 .build();
+    }
+
+    private java.time.Instant toUtcInstant(java.time.LocalDateTime value) {
+        return value == null ? null : value.toInstant(java.time.ZoneOffset.UTC);
     }
 
     private void validateTransition(OrderStatus current, OrderStatus next) {

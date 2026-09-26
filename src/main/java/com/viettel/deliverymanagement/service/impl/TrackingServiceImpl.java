@@ -29,7 +29,7 @@ public class TrackingServiceImpl implements TrackingService {
 
     @Override
     @Transactional(readOnly = true)
-    public TrackingResponse trackOrder(String trackingNumber) {
+    public TrackingResponse trackOrder(String trackingNumber, boolean includePrivateDetails) {
         log.info("Tra cứu hành trình đơn hàng với mã vận đơn: {}", trackingNumber);
 
         OrderEntity order = orderRepository.findByTrackingNumber(trackingNumber)
@@ -47,13 +47,11 @@ public class TrackingServiceImpl implements TrackingService {
         String shipperName = shipper == null
                 ? null
                 : (shipper.getFullName() != null ? shipper.getFullName() : shipper.getUsername());
-        String shipperPhone = shipper == null ? null : shipper.getPhoneNumber();
-
         List<ShipmentHistoryDto> historyList = shipments.stream()
                 .map(shipment -> ShipmentHistoryDto.builder()
                         .status(shipment.getStatus())
-                        .note(shipment.getNote())
-                        .proofImageUrl(shipment.getProofImageUrl())
+                        .note(includePrivateDetails ? shipment.getNote() : shipment.getStatus().getDescription())
+                        .proofImageUrl(includePrivateDetails ? shipment.getProofImageUrl() : null)
                         .timestamp(shipment.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
@@ -62,17 +60,36 @@ public class TrackingServiceImpl implements TrackingService {
 
         return TrackingResponse.builder()
                 .trackingNumber(order.getTrackingNumber())
-                .orderId(order.getId())
-                .senderName(order.getSenderName())
-                .receiverName(order.getReceiverName())
-                .receiverAddress(order.getReceiverAddress())
-                .shipperName(shipperName)
-                .shipperPhone(shipperPhone)
+                .orderId(includePrivateDetails ? order.getId() : null)
+                .senderName(includePrivateDetails ? order.getSenderName() : maskName(order.getSenderName()))
+                .receiverName(includePrivateDetails ? order.getReceiverName() : maskName(order.getReceiverName()))
+                .receiverAddress(includePrivateDetails ? order.getReceiverAddress() : maskAddress(order.getReceiverAddress()))
+                .shipperName(includePrivateDetails ? shipperName : maskName(shipperName))
+                .shipperPhone(includePrivateDetails && shipper != null ? shipper.getPhoneNumber() : null)
                 .currentStatus(order.getStatus())
-                .shippingFee(order.getShippingFee())
-                .codAmount(order.getCodAmount())
-                .totalFee(order.getTotalFee())
+                .shippingFee(includePrivateDetails ? order.getShippingFee() : null)
+                .codAmount(includePrivateDetails ? order.getCodAmount() : null)
+                .totalFee(includePrivateDetails ? order.getTotalFee() : null)
                 .history(historyList)
                 .build();
+    }
+
+    private String maskName(String value) {
+        if (value == null || value.isBlank()) return null;
+        return java.util.Arrays.stream(value.trim().split("\\s+"))
+                .map(part -> part.length() == 1 ? part + "***" : part.substring(0, 1) + "***")
+                .collect(Collectors.joining(" "));
+    }
+
+    private String maskAddress(String value) {
+        if (value == null || value.isBlank()) return null;
+        String[] parts = value.split(",");
+        if (parts.length < 2) return "Địa chỉ đã được ẩn";
+        int visibleStart = Math.max(1, parts.length - 2);
+        String visibleArea = java.util.Arrays.stream(parts, visibleStart, parts.length)
+                .map(String::trim)
+                .filter(part -> !part.isEmpty())
+                .collect(Collectors.joining(", "));
+        return visibleArea.isEmpty() ? "Địa chỉ đã được ẩn" : "•••, " + visibleArea;
     }
 }

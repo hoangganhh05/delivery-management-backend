@@ -13,7 +13,8 @@ public class V6__Persist_shipment_location extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         Connection connection = context.getConnection();
-        if (!connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql")) {
+        String database = connection.getMetaData().getDatabaseProductName().toLowerCase();
+        if (!database.contains("mysql") && !database.contains("mariadb")) {
             return;
         }
         addColumnIfMissing(connection, "current_latitude", "DECIMAL(10,7) NULL");

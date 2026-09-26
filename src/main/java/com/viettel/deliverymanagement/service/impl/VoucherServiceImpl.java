@@ -103,7 +103,9 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         log.info("Tính toán thành công: Số tiền giảm giá cho voucher {} là {}", voucher.getCode(), discountAmount);
-        BigDecimal finalAmount = request.getOrderAmount().subtract(discountAmount).max(BigDecimal.ZERO);
+        // finalAmount represents the charge after this voucher. When shippingFee is
+        // supplied the voucher applies to that fee, not to the declared goods value.
+        BigDecimal finalAmount = discountBase.subtract(discountAmount).max(BigDecimal.ZERO);
         return VoucherCalculationResponse.builder()
                 .code(voucher.getCode())
                 .orderAmount(request.getOrderAmount())

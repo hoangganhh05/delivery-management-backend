@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /** Latest GPS point, returned only after the order-access check succeeds. */
 @Getter
@@ -14,6 +14,6 @@ public class DriverLocationResponse {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private BigDecimal accuracyMeters;
-    private LocalDateTime reportedAt;
-    private LocalDateTime receivedAt;
+    private Instant reportedAt;
+    private Instant receivedAt;
 }

@@ -47,9 +47,9 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
 
-    @Value("${vietqr.bank-id:970436}") private String qrBankId;
-    @Value("${vietqr.account-number:1070980445}") private String qrAccountNumber;
-    @Value("${vietqr.account-name:CAO HOANG ANH}") private String qrAccountName;
+    @Value("${vietqr.bank-id:}") private String qrBankId;
+    @Value("${vietqr.account-number:}") private String qrAccountNumber;
+    @Value("${vietqr.account-name:}") private String qrAccountName;
 
     @Override
     @Transactional
@@ -220,6 +220,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public QrPaymentResponse getQrPayment(Long orderId, String username) {
+        requireQrConfiguration();
         OrderEntity order = findAccessibleOrder(orderId, username);
         if (order.getPaymentMethod() != PaymentMethod.VCB_QR) {
             throw new AppException("INVALID_PAYMENT_METHOD", "Đơn hàng không chọn chuyển khoản ngân hàng");
@@ -275,6 +276,14 @@ public class PaymentServiceImpl implements PaymentService {
                 || vnPayConfig.getVnpHashSecret() == null || vnPayConfig.getVnpHashSecret().isBlank()
                 || vnPayConfig.getVnpReturnUrl() == null || vnPayConfig.getVnpReturnUrl().isBlank()) {
             throw new AppException("PAYMENT_GATEWAY_UNAVAILABLE", "Cổng thanh toán VNPay chưa được cấu hình");
+        }
+    }
+
+    private void requireQrConfiguration() {
+        if (qrBankId == null || qrBankId.isBlank()
+                || qrAccountNumber == null || qrAccountNumber.isBlank()
+                || qrAccountName == null || qrAccountName.isBlank()) {
+            throw new AppException("PAYMENT_GATEWAY_UNAVAILABLE", "Thông tin nhận chuyển khoản VietQR chưa được cấu hình");
         }
     }
 

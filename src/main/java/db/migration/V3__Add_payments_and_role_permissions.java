@@ -12,7 +12,8 @@ public class V3__Add_payments_and_role_permissions extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         Connection connection = context.getConnection();
-        if (!connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql")) {
+        String database = connection.getMetaData().getDatabaseProductName().toLowerCase();
+        if (!database.contains("mysql") && !database.contains("mariadb")) {
             return;
         }
 

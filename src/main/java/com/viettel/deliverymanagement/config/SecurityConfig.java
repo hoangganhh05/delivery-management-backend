@@ -2,9 +2,11 @@ package com.viettel.deliverymanagement.config;
 
 import com.viettel.deliverymanagement.security.JwtAuthenticationEntryPoint;
 import com.viettel.deliverymanagement.security.JwtAuthenticationFilter;
+import com.viettel.deliverymanagement.security.TrackingRateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -22,6 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -31,6 +34,10 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final TrackingRateLimitFilter trackingRateLimitFilter;
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:8443}")
+    private String allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,20 +52,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://localhost:8443",
-                "https://delivery-frontend.hoang45682.workers.dev",
-                "https://genuine-ganache-5f9e66.netlify.app",
-                "https://*.netlify.app",
-                "https://delivery-management-frontend.vercel.app",
-                "https://*.vercel.app"
-        ));
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization", "Link", "X-Total-Count"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -84,6 +85,7 @@ public class SecurityConfig {
                         // Mở permitAll() cho các endpoints công khai
                         .requestMatchers("/auth/**", "/api/v1/auth/**").permitAll()
                         .requestMatchers("/tracking/**", "/api/v1/tracking/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/payment/vnpay-callback", "/api/v1/payment/vnpay-callback").permitAll()
                         .requestMatchers(HttpMethod.POST, "/vouchers/calculate", "/api/v1/vouchers/calculate").permitAll()
                         .requestMatchers(
@@ -106,12 +108,16 @@ public class SecurityConfig {
                                 "/users/settings",
                                 "/users/addresses",
                                 "/users/addresses/**",
+                                "/users/bank-accounts",
+                                "/users/bank-accounts/**",
                                 "/api/v1/users/me",
                                 "/api/v1/users/profile",
                                 "/api/v1/users/change-password",
                                 "/api/v1/users/settings",
                                 "/api/v1/users/addresses",
-                                "/api/v1/users/addresses/**"
+                                "/api/v1/users/addresses/**",
+                                "/api/v1/users/bank-accounts",
+                                "/api/v1/users/bank-accounts/**"
                         ).authenticated()
                         .requestMatchers("/users/**", "/api/v1/users/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/shippers/**", "/api/v1/shippers/**").authenticated()
@@ -123,7 +129,8 @@ public class SecurityConfig {
                         // Tất cả các request còn lại yêu cầu xác thực JWT
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(trackingRateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

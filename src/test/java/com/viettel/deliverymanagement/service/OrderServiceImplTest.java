@@ -9,6 +9,7 @@ import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
+import com.viettel.deliverymanagement.entity.VoucherEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
@@ -171,8 +172,8 @@ class OrderServiceImplTest {
     }
 
     @Test
-    @DisplayName("Chuyển khoản chưa xác nhận chỉ tạo yêu cầu chờ thanh toán")
-    void createOrder_BankTransferAwaitsPayment() {
+    @DisplayName("Không cho tạo đơn mới bằng luồng QR ngân hàng đã ngừng hỗ trợ")
+    void createOrder_RejectsRetiredQrBankTransfer() {
         CreateOrderRequest request = new CreateOrderRequest();
         request.setSenderName("Nguyen Van A");
         request.setSenderPhone("0987654321");
@@ -186,17 +187,13 @@ class OrderServiceImplTest {
 
         when(userRepository.findByUsername("customer"))
                 .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
-        when(orderRepository.save(any(OrderEntity.class))).thenAnswer(invocation -> {
-            OrderEntity order = invocation.getArgument(0);
-            order.setId(3L);
-            return order;
-        });
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.createOrder(request, "customer")
+        );
 
-        OrderResponse response = orderService.createOrder(request, "customer");
-
-        assertEquals(OrderStatus.PENDING, response.getStatus());
-        assertEquals(PaymentStatus.PENDING, response.getPaymentStatus());
-        assertEquals(PaymentMethod.VCB_QR, response.getPaymentMethod());
+        assertEquals("PAYMENT_METHOD_DISABLED", exception.getCode());
+        verify(orderRepository, never()).save(any(OrderEntity.class));
     }
 
     @Test
@@ -242,6 +239,49 @@ class OrderServiceImplTest {
         );
 
         assertEquals("VOUCHER_NOT_FOUND", exception.getCode());
+        verify(orderRepository, never()).save(any(OrderEntity.class));
+    }
+
+    @Test
+    @DisplayName("Không tạo đơn khi lượt voucher vừa bị yêu cầu khác sử dụng hết")
+    void createOrder_AtomicVoucherConsumptionRejectsExhaustedVoucher() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setSenderName("Nguyen Van A");
+        request.setSenderPhone("0987654321");
+        request.setSenderAddress("Ha Noi");
+        request.setReceiverName("Tran Thi B");
+        request.setReceiverPhone("0912345678");
+        request.setReceiverAddress("Hai Phong");
+        request.setWeightGram(500);
+        request.setShippingFee(BigDecimal.valueOf(30000));
+        request.setVoucherCode("LASTONE");
+
+        OrderItemRequest item = new OrderItemRequest();
+        item.setItemName("Tai lieu");
+        item.setQuantity(1);
+        item.setWeightGram(500);
+        item.setDeclaredValue(BigDecimal.valueOf(100000));
+        request.setItems(List.of(item));
+
+        VoucherEntity voucher = VoucherEntity.builder()
+                .id(8L)
+                .code("LASTONE")
+                .discountPercent(50)
+                .usageLimit(1)
+                .active(true)
+                .build();
+        when(userRepository.findByUsername("customer"))
+                .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+        when(voucherRepository.findByCode("LASTONE")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.consumeOneUse(8L)).thenReturn(0);
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.createOrder(request, "customer")
+        );
+
+        assertEquals("VOUCHER_OUT_OF_USAGE", exception.getCode());
+        verify(voucherRepository).consumeOneUse(8L);
         verify(orderRepository, never()).save(any(OrderEntity.class));
     }
 

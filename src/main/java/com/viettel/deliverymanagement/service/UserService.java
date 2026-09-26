@@ -4,8 +4,10 @@ import com.viettel.deliverymanagement.dto.request.ChangePasswordRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateProfileRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserSettingsRequest;
 import com.viettel.deliverymanagement.dto.request.UpsertUserAddressRequest;
+import com.viettel.deliverymanagement.dto.request.UpsertUserBankAccountRequest;
 import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
+import com.viettel.deliverymanagement.dto.response.UserBankAccountResponse;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
 import com.viettel.deliverymanagement.dto.response.UserDto;
@@ -35,6 +37,16 @@ public interface UserService {
     List<UserAddressResponse> deleteAddress(String username, Long addressId);
 
     UserAddressResponse setDefaultAddress(String username, Long addressId);
+
+    List<UserBankAccountResponse> getBankAccounts(String username);
+
+    UserBankAccountResponse createBankAccount(String username, UpsertUserBankAccountRequest request);
+
+    UserBankAccountResponse updateBankAccount(String username, Long accountId, UpsertUserBankAccountRequest request);
+
+    List<UserBankAccountResponse> deleteBankAccount(String username, Long accountId);
+
+    UserBankAccountResponse setDefaultBankAccount(String username, Long accountId);
 
     UserSettingsResponse updateSettings(String username, UpdateUserSettingsRequest request);
 

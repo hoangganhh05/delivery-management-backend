@@ -366,7 +366,9 @@ public class V2__Persist_user_account_settings extends BaseJavaMigration {
 
     private boolean isMySql(Connection connection) throws SQLException {
         String productName = connection.getMetaData().getDatabaseProductName();
-        return productName != null && productName.toLowerCase(Locale.ROOT).contains("mysql");
+        if (productName == null) return false;
+        String normalized = productName.toLowerCase(Locale.ROOT);
+        return normalized.contains("mysql") || normalized.contains("mariadb");
     }
 
     private void execute(Connection connection, String sql) throws SQLException {

@@ -4,10 +4,12 @@ import com.viettel.deliverymanagement.dto.request.ChangePasswordRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateProfileRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserSettingsRequest;
 import com.viettel.deliverymanagement.dto.request.UpsertUserAddressRequest;
+import com.viettel.deliverymanagement.dto.request.UpsertUserBankAccountRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserRoleRequest;
 import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
+import com.viettel.deliverymanagement.dto.response.UserBankAccountResponse;
 import com.viettel.deliverymanagement.dto.response.UserDto;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
@@ -163,6 +165,59 @@ public class UserController {
         return ResponseData.success(
                 "Đã đặt địa chỉ mặc định",
                 userService.setDefaultAddress(authentication.getName(), id)
+        );
+    }
+
+    @GetMapping("/bank-accounts")
+    public ResponseData<List<UserBankAccountResponse>> getBankAccounts(Authentication authentication) {
+        return ResponseData.success(
+                "Lấy danh sách tài khoản nhận tiền thành công",
+                userService.getBankAccounts(authentication.getName())
+        );
+    }
+
+    @PostMapping("/bank-accounts")
+    public ResponseData<UserBankAccountResponse> createBankAccount(
+            Authentication authentication,
+            @Valid @RequestBody UpsertUserBankAccountRequest request
+    ) {
+        return ResponseData.success(
+                "Thêm tài khoản nhận tiền thành công",
+                userService.createBankAccount(authentication.getName(), request)
+        );
+    }
+
+    @PutMapping("/bank-accounts/{id}")
+    public ResponseData<UserBankAccountResponse> updateBankAccount(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody UpsertUserBankAccountRequest request
+    ) {
+        return ResponseData.success(
+                "Cập nhật tài khoản nhận tiền thành công",
+                userService.updateBankAccount(authentication.getName(), id, request)
+        );
+    }
+
+    @DeleteMapping("/bank-accounts/{id}")
+    public ResponseData<List<UserBankAccountResponse>> deleteBankAccount(
+            Authentication authentication,
+            @PathVariable Long id
+    ) {
+        return ResponseData.success(
+                "Xóa tài khoản nhận tiền thành công",
+                userService.deleteBankAccount(authentication.getName(), id)
+        );
+    }
+
+    @PutMapping("/bank-accounts/{id}/default")
+    public ResponseData<UserBankAccountResponse> setDefaultBankAccount(
+            Authentication authentication,
+            @PathVariable Long id
+    ) {
+        return ResponseData.success(
+                "Đã đặt tài khoản nhận tiền mặc định",
+                userService.setDefaultBankAccount(authentication.getName(), id)
         );
     }
 

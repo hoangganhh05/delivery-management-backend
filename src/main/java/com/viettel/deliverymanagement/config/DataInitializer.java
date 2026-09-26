@@ -6,7 +6,6 @@ import com.viettel.deliverymanagement.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -19,7 +18,6 @@ import java.time.LocalDateTime;
 public class DataInitializer implements CommandLineRunner {
 
     private final VoucherRepository voucherRepository;
-    private final JdbcTemplate jdbcTemplate;
     private final PermissionService permissionService;
 
     @Value("${app.seed-vouchers:true}")
@@ -27,57 +25,9 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        autoMigrateDatabaseSchema();
         permissionService.seedDefaults();
         if (seedDefaultVouchers) {
             seedVouchers();
-        }
-    }
-
-    /**
-     * Tự động chạy các lệnh ALTER TABLE an toàn để đảm bảo mọi bảng trong DB đều đủ cột audit
-     * mà không cần người dùng phải mở SQL Console bên ngoài.
-     */
-    private void autoMigrateDatabaseSchema() {
-        String[] tables = {"vouchers", "orders", "shipments", "notifications", "users"};
-        for (String table : tables) {
-            ensureColumn(table, "updated_at", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-            ensureColumn(table, "created_at", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP");
-            ensureColumn(table, "created_by", "VARCHAR(50) NULL");
-            ensureColumn(table, "updated_by", "VARCHAR(50) NULL");
-            if (!"users".equals(table)) {
-                ensureColumn(table, "is_deleted", "TINYINT(1) DEFAULT 0");
-            }
-        }
-
-        // These columns were introduced after the first production schema was created.
-        // Without them, every SELECT from orders/order_items fails with an SQL 500.
-        ensureColumn("orders", "total_price", "DECIMAL(15,2) NULL");
-        ensureColumn("order_items", "price", "DECIMAL(12,2) NULL");
-        ensureColumn("order_items", "weight_gram", "INT NULL");
-        ensureColumn("order_items", "declared_value", "DECIMAL(12,2) NULL");
-        ensureColumn("vouchers", "active", "TINYINT(1) NOT NULL DEFAULT 1");
-
-        log.info("Tự động kiểm tra và đồng bộ cấu trúc cột Database thành công!");
-    }
-
-    private void ensureColumn(String table, String column, String definition) {
-        try {
-            Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM information_schema.COLUMNS "
-                            + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
-                    Integer.class,
-                    table,
-                    column
-            );
-            if (count != null && count == 0) {
-                jdbcTemplate.execute("ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition);
-                log.info("Đã bổ sung cột {}.{} cho schema hiện tại", table, column);
-            }
-        } catch (Exception e) {
-            // A missing table/permission should be visible in Render logs but should not
-            // prevent the application from starting when that table is not in use yet.
-            log.warn("Không thể đồng bộ cột {}.{}: {}", table, column, e.getMessage());
         }
     }
 

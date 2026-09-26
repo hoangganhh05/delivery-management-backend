@@ -7,17 +7,22 @@ import com.viettel.deliverymanagement.dto.request.ChangePasswordRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateProfileRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserSettingsRequest;
 import com.viettel.deliverymanagement.dto.request.UpsertUserAddressRequest;
+import com.viettel.deliverymanagement.dto.request.UpsertUserBankAccountRequest;
 import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
+import com.viettel.deliverymanagement.dto.response.UserBankAccountResponse;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
 import com.viettel.deliverymanagement.entity.UserAddressEntity;
+import com.viettel.deliverymanagement.entity.UserBankAccountEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.entity.UserSettingsEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.UserAddressRepository;
+import com.viettel.deliverymanagement.repository.UserBankAccountRepository;
 import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.repository.UserSettingsRepository;
+import com.viettel.deliverymanagement.security.BankAccountCipher;
 import com.viettel.deliverymanagement.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,10 +56,16 @@ class UserServiceImplTest {
     private UserAddressRepository userAddressRepository;
 
     @Mock
+    private UserBankAccountRepository userBankAccountRepository;
+
+    @Mock
     private UserSettingsRepository userSettingsRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private BankAccountCipher bankAccountCipher;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -181,6 +192,81 @@ class UserServiceImplTest {
     }
 
     @Test
+    @DisplayName("Tài khoản nhận tiền đầu tiên được mã hóa, che số và đặt mặc định")
+    void createBankAccount_FirstAccountIsEncryptedAndDefault() {
+        UserEntity user = testUser(7L, "customer");
+        when(userRepository.findByUsernameForUpdate("customer")).thenReturn(Optional.of(user));
+        when(userBankAccountRepository.countByUserId(7L)).thenReturn(0L);
+        when(bankAccountCipher.encrypt("123456789012")).thenReturn("encrypted-account-number");
+        when(userBankAccountRepository.saveAndFlush(any(UserBankAccountEntity.class)))
+                .thenAnswer(invocation -> {
+                    UserBankAccountEntity account = invocation.getArgument(0);
+                    account.setId(12L);
+                    return account;
+                });
+
+        UserBankAccountResponse response = userService.createBankAccount(
+                "customer",
+                bankAccountRequest("1234 5678 9012", false)
+        );
+
+        assertEquals(12L, response.getId());
+        assertEquals("9012", response.getAccountNumberLast4());
+        assertTrue(response.isDefaultAccount());
+        assertFalse(response.isVerified());
+        verify(bankAccountCipher).encrypt("123456789012");
+        verify(userBankAccountRepository).clearDefaultForUser(7L);
+    }
+
+    @Test
+    @DisplayName("Không thể sửa tài khoản nhận tiền không thuộc tài khoản trong JWT")
+    void updateBankAccount_OtherUsersAccountRejected() {
+        UserEntity user = testUser(7L, "customer");
+        when(userRepository.findByUsernameForUpdate("customer")).thenReturn(Optional.of(user));
+        when(userBankAccountRepository.findByIdAndUserId(99L, 7L)).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> userService.updateBankAccount("customer", 99L, bankAccountRequest("123456789012", false))
+        );
+
+        assertEquals("BANK_ACCOUNT_NOT_FOUND", exception.getCode());
+        verify(bankAccountCipher, never()).encrypt(any());
+    }
+
+    @Test
+    @DisplayName("Không thể lưu quá năm tài khoản nhận tiền")
+    void createBankAccount_EnforcesLimit() {
+        UserEntity user = testUser(7L, "customer");
+        when(userRepository.findByUsernameForUpdate("customer")).thenReturn(Optional.of(user));
+        when(userBankAccountRepository.countByUserId(7L)).thenReturn(5L);
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> userService.createBankAccount("customer", bankAccountRequest("123456789012", false))
+        );
+
+        assertEquals("BANK_ACCOUNT_LIMIT_REACHED", exception.getCode());
+        verify(bankAccountCipher, never()).encrypt(any());
+    }
+
+    @Test
+    @DisplayName("Chỉ tài khoản khách hàng được dùng sổ tài khoản nhận tiền")
+    void getBankAccounts_NonCustomerRejected() {
+        UserEntity admin = testUser(1L, "admin");
+        admin.setRole(Role.ADMIN);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> userService.getBankAccounts("admin")
+        );
+
+        assertEquals("BANK_ACCOUNT_ACCESS_DENIED", exception.getCode());
+        verify(userBankAccountRepository, never()).findAllByUserIdOrderByDefaultAccountDescCreatedAtAsc(any());
+    }
+
+    @Test
     @DisplayName("Lưu toàn bộ tùy chọn thông báo và giao diện vào user_settings")
     void updateSettings_PersistsAllPreferences() {
         UserEntity user = testUser(7L, "customer");
@@ -248,6 +334,16 @@ class UserServiceImplTest {
                 .province("TP.HCM")
                 .postalCode("700000")
                 .defaultAddress(defaultAddress)
+                .build();
+    }
+
+    private UpsertUserBankAccountRequest bankAccountRequest(String accountNumber, boolean defaultAccount) {
+        return UpsertUserBankAccountRequest.builder()
+                .bankCode("vcb")
+                .bankName("Vietcombank")
+                .accountHolderName("Nguyen Van A")
+                .accountNumber(accountNumber)
+                .defaultAccount(defaultAccount)
                 .build();
     }
 }

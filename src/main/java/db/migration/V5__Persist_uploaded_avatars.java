@@ -13,7 +13,8 @@ public class V5__Persist_uploaded_avatars extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         Connection connection = context.getConnection();
-        if (!connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql")) {
+        String database = connection.getMetaData().getDatabaseProductName().toLowerCase();
+        if (!database.contains("mysql") && !database.contains("mariadb")) {
             return;
         }
 

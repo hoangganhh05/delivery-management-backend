@@ -4,16 +4,16 @@ services:
     container_name: delivery_mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-hoang2005}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-delivery_db}
       MYSQL_USER: ${MYSQL_USER:-delivery_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-hoang2005}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-hoang2005}"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,11 +32,20 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mariadb:3306/${MYSQL_DATABASE:-delivery_db}?createDatabaseIfNotExist=true&useSSL=false&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-delivery_user}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-hoang2005}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      HIBERNATE_DDL_AUTO: validate
       SERVER_SERVLET_CONTEXT_PATH: /api/v1
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting the stack}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      SEED_VOUCHERS: ${SEED_VOUCHERS:-false}
+      VIETQR_BANK_ID: ${VIETQR_BANK_ID:-}
+      VIETQR_ACCOUNT_NUMBER: ${VIETQR_ACCOUNT_NUMBER:-}
+      VIETQR_ACCOUNT_NAME: ${VIETQR_ACCOUNT_NAME:-}
+      BANK_ACCOUNT_ENCRYPTION_KEY: ${BANK_ACCOUNT_ENCRYPTION_KEY:-}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-}
       BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}

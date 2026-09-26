@@ -74,6 +74,17 @@ class PaymentServiceImplTest {
         verify(orderRepository, never()).save(any(OrderEntity.class));
     }
 
+    @Test
+    void qrPayment_RejectsMissingBankAccountConfiguration() {
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> paymentService.getQrPayment(1L, "customer")
+        );
+
+        assertEquals("PAYMENT_GATEWAY_UNAVAILABLE", exception.getCode());
+        verify(orderRepository, never()).findById(any());
+    }
+
     private OrderEntity pendingOrder(PaymentMethod method) {
         return OrderEntity.builder().id(1L).trackingNumber("VT12345678")
                 .senderName("Khach hang").totalFee(BigDecimal.valueOf(30000))

@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSpecificationExecutor<OrderEntity> {
@@ -41,4 +42,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSp
             @Param("cod") PaymentMethod cod, @Param("paid") PaymentStatus paid);
 
     List<OrderEntity> findByIdInOrderByIdDesc(List<Long> ids);
+
+    @Query("SELECT o FROM OrderEntity o WHERE o.createdAt >= :from AND o.createdAt < :toExclusive "
+            + "AND (o.paymentMethod = :cod OR o.paymentStatus = :paid) ORDER BY o.createdAt ASC")
+    List<OrderEntity> findConfirmedForReport(
+            @Param("from") LocalDateTime from,
+            @Param("toExclusive") LocalDateTime toExclusive,
+            @Param("cod") PaymentMethod cod,
+            @Param("paid") PaymentStatus paid
+    );
 }

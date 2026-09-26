@@ -55,6 +55,12 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse createOrder(CreateOrderRequest request, String username) {
         UserEntity currentUser = requireUser(username);
         PaymentMethod paymentMethod = request.getPaymentMethod() == null ? PaymentMethod.COD : request.getPaymentMethod();
+        if (paymentMethod == PaymentMethod.VCB_QR) {
+            throw new AppException(
+                    "PAYMENT_METHOD_DISABLED",
+                    "Chuyển khoản QR ngân hàng không còn được hỗ trợ cho đơn hàng mới"
+            );
+        }
         // 1. Sinh mã vận đơn tự động (Tracking Number)
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -124,8 +130,9 @@ public class OrderServiceImpl implements OrderService {
                 discountFee = shippingFee;
             }
             if (voucher.getUsageLimit() != null) {
-                voucher.setUsageLimit(voucher.getUsageLimit() - 1);
-                voucherRepository.save(voucher);
+                if (voucherRepository.consumeOneUse(voucher.getId()) != 1) {
+                    throw new AppException("VOUCHER_OUT_OF_USAGE", "Voucher đã hết lượt sử dụng");
+                }
             }
         }
 

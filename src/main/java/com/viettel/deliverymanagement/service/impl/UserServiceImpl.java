@@ -4,19 +4,24 @@ import com.viettel.deliverymanagement.dto.request.ChangePasswordRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateProfileRequest;
 import com.viettel.deliverymanagement.dto.request.UpdateUserSettingsRequest;
 import com.viettel.deliverymanagement.dto.request.UpsertUserAddressRequest;
+import com.viettel.deliverymanagement.dto.request.UpsertUserBankAccountRequest;
 import com.viettel.deliverymanagement.dto.response.PasswordChangeResponse;
 import com.viettel.deliverymanagement.dto.response.UserAddressResponse;
+import com.viettel.deliverymanagement.dto.response.UserBankAccountResponse;
 import com.viettel.deliverymanagement.dto.response.UserMeResponse;
 import com.viettel.deliverymanagement.dto.response.UserSettingsResponse;
 import com.viettel.deliverymanagement.dto.response.UserDto;
 import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.entity.UserAddressEntity;
+import com.viettel.deliverymanagement.entity.UserBankAccountEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
 import com.viettel.deliverymanagement.entity.UserSettingsEntity;
 import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.UserAddressRepository;
+import com.viettel.deliverymanagement.repository.UserBankAccountRepository;
 import com.viettel.deliverymanagement.repository.UserRepository;
 import com.viettel.deliverymanagement.repository.UserSettingsRepository;
+import com.viettel.deliverymanagement.security.BankAccountCipher;
 import com.viettel.deliverymanagement.security.PasswordPolicy;
 import com.viettel.deliverymanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -40,12 +45,15 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     private static final long MAX_AVATAR_BYTES = 1_500_000;
+    private static final int MAX_BANK_ACCOUNTS = 5;
     private static final Set<String> ALLOWED_AVATAR_TYPES = Set.of("image/jpeg", "image/png");
 
     private final UserRepository userRepository;
     private final UserAddressRepository userAddressRepository;
+    private final UserBankAccountRepository userBankAccountRepository;
     private final UserSettingsRepository userSettingsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BankAccountCipher bankAccountCipher;
 
     @Override
     @Transactional
@@ -233,6 +241,96 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<UserBankAccountResponse> getBankAccounts(String username) {
+        UserEntity user = findUser(username);
+        requireCustomerForBankAccounts(user);
+        return findBankAccountResponses(user.getId());
+    }
+
+    @Override
+    @Transactional
+    public UserBankAccountResponse createBankAccount(String username, UpsertUserBankAccountRequest request) {
+        UserEntity user = findUserForUpdate(username);
+        requireCustomerForBankAccounts(user);
+        long savedAccountCount = userBankAccountRepository.countByUserId(user.getId());
+        if (savedAccountCount >= MAX_BANK_ACCOUNTS) {
+            throw new AppException(
+                    "BANK_ACCOUNT_LIMIT_REACHED",
+                    "Mỗi tài khoản chỉ có thể lưu tối đa " + MAX_BANK_ACCOUNTS + " tài khoản nhận tiền"
+            );
+        }
+
+        boolean makeDefault = request.isDefaultAccount() || savedAccountCount == 0;
+        if (makeDefault) {
+            userBankAccountRepository.clearDefaultForUser(user.getId());
+        }
+
+        UserBankAccountEntity account = UserBankAccountEntity.builder()
+                .user(user)
+                .defaultAccount(makeDefault)
+                .verified(false)
+                .build();
+        copyBankAccountRequest(request, account);
+        return toBankAccountResponse(userBankAccountRepository.saveAndFlush(account));
+    }
+
+    @Override
+    @Transactional
+    public UserBankAccountResponse updateBankAccount(
+            String username,
+            Long accountId,
+            UpsertUserBankAccountRequest request
+    ) {
+        UserEntity user = findUserForUpdate(username);
+        requireCustomerForBankAccounts(user);
+        UserBankAccountEntity account = findOwnedBankAccount(accountId, user.getId());
+        boolean keepDefault = account.isDefaultAccount();
+
+        if (request.isDefaultAccount() && !keepDefault) {
+            userBankAccountRepository.clearDefaultForUser(user.getId());
+            keepDefault = true;
+        }
+
+        copyBankAccountRequest(request, account);
+        account.setDefaultAccount(keepDefault);
+        account.setVerified(false);
+        return toBankAccountResponse(userBankAccountRepository.saveAndFlush(account));
+    }
+
+    @Override
+    @Transactional
+    public List<UserBankAccountResponse> deleteBankAccount(String username, Long accountId) {
+        UserEntity user = findUserForUpdate(username);
+        requireCustomerForBankAccounts(user);
+        UserBankAccountEntity account = findOwnedBankAccount(accountId, user.getId());
+        boolean deletedDefault = account.isDefaultAccount();
+        userBankAccountRepository.delete(account);
+        userBankAccountRepository.flush();
+
+        List<UserBankAccountEntity> remaining =
+                userBankAccountRepository.findAllByUserIdOrderByDefaultAccountDescCreatedAtAsc(user.getId());
+        if (deletedDefault && !remaining.isEmpty()) {
+            UserBankAccountEntity replacement = remaining.get(0);
+            replacement.setDefaultAccount(true);
+            userBankAccountRepository.saveAndFlush(replacement);
+            remaining = userBankAccountRepository.findAllByUserIdOrderByDefaultAccountDescCreatedAtAsc(user.getId());
+        }
+        return remaining.stream().map(this::toBankAccountResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public UserBankAccountResponse setDefaultBankAccount(String username, Long accountId) {
+        UserEntity user = findUserForUpdate(username);
+        requireCustomerForBankAccounts(user);
+        UserBankAccountEntity account = findOwnedBankAccount(accountId, user.getId());
+        userBankAccountRepository.clearDefaultForUser(user.getId());
+        account.setDefaultAccount(true);
+        return toBankAccountResponse(userBankAccountRepository.saveAndFlush(account));
+    }
+
+    @Override
     @Transactional
     public UserSettingsResponse updateSettings(String username, UpdateUserSettingsRequest request) {
         UserEntity user = findUserForUpdate(username);
@@ -295,6 +393,23 @@ public class UserServiceImpl implements UserService {
                 ));
     }
 
+    private UserBankAccountEntity findOwnedBankAccount(Long accountId, Long userId) {
+        return userBankAccountRepository.findByIdAndUserId(accountId, userId)
+                .orElseThrow(() -> new AppException(
+                        "BANK_ACCOUNT_NOT_FOUND",
+                        "Không tìm thấy tài khoản nhận tiền thuộc tài khoản đang đăng nhập"
+                ));
+    }
+
+    private void requireCustomerForBankAccounts(UserEntity user) {
+        if (user.getRole() != Role.CUSTOMER) {
+            throw new AppException(
+                    "BANK_ACCOUNT_ACCESS_DENIED",
+                    "Chức năng tài khoản nhận tiền hiện chỉ dành cho khách hàng"
+            );
+        }
+    }
+
     private UserSettingsEntity getOrCreateSettings(UserEntity user) {
         return userSettingsRepository.findByUserId(user.getId())
                 .orElseGet(() -> userSettingsRepository.save(UserSettingsEntity.defaultsFor(user)));
@@ -325,6 +440,13 @@ public class UserServiceImpl implements UserService {
                 .toList();
     }
 
+    private List<UserBankAccountResponse> findBankAccountResponses(Long userId) {
+        return userBankAccountRepository.findAllByUserIdOrderByDefaultAccountDescCreatedAtAsc(userId)
+                .stream()
+                .map(this::toBankAccountResponse)
+                .toList();
+    }
+
     private void copyAddressRequest(UpsertUserAddressRequest request, UserAddressEntity address) {
         address.setLabel(request.getLabel().trim());
         address.setRecipientName(request.getRecipientName().trim());
@@ -348,6 +470,51 @@ public class UserServiceImpl implements UserService {
                 .province(address.getProvince())
                 .postalCode(address.getPostalCode())
                 .defaultAddress(address.isDefaultAddress())
+                .build();
+    }
+
+    private void copyBankAccountRequest(
+            UpsertUserBankAccountRequest request,
+            UserBankAccountEntity account
+    ) {
+        String accountNumber = normalizeAccountNumber(request.getAccountNumber());
+        account.setBankCode(trimToNull(request.getBankCode()) == null
+                ? null
+                : request.getBankCode().trim().toUpperCase(Locale.ROOT));
+        account.setBankName(normalizeBankAccountText(request.getBankName(), "Tên ngân hàng"));
+        account.setAccountHolderName(normalizeBankAccountText(request.getAccountHolderName(), "Tên chủ tài khoản"));
+        account.setAccountNumberEncrypted(bankAccountCipher.encrypt(accountNumber));
+        account.setAccountNumberLast4(accountNumber.substring(accountNumber.length() - 4));
+    }
+
+    private String normalizeAccountNumber(String value) {
+        String accountNumber = value == null ? "" : value.replaceAll("\\s+", "");
+        if (!accountNumber.matches("[0-9]{6,34}")) {
+            throw new AppException(
+                    "INVALID_BANK_ACCOUNT_NUMBER",
+                    "Số tài khoản chỉ gồm từ 6 đến 34 chữ số"
+            );
+        }
+        return accountNumber;
+    }
+
+    private String normalizeBankAccountText(String value, String fieldName) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            throw new AppException("INVALID_BANK_ACCOUNT", fieldName + " không được để trống");
+        }
+        return normalized.replaceAll("\\s{2,}", " ");
+    }
+
+    private UserBankAccountResponse toBankAccountResponse(UserBankAccountEntity account) {
+        return UserBankAccountResponse.builder()
+                .id(account.getId())
+                .bankCode(account.getBankCode())
+                .bankName(account.getBankName())
+                .accountHolderName(account.getAccountHolderName())
+                .accountNumberLast4(account.getAccountNumberLast4())
+                .defaultAccount(account.isDefaultAccount())
+                .verified(account.isVerified())
                 .build();
     }
 
