@@ -1,6 +1,7 @@
 package com.viettel.deliverymanagement.service.impl;
 
 import com.viettel.deliverymanagement.config.VNPayConfig;
+import com.viettel.deliverymanagement.config.ManualPaymentConfig;
 import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.constant.PaymentMethod;
@@ -8,6 +9,7 @@ import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.dto.response.PaymentResponse;
 import com.viettel.deliverymanagement.dto.response.PaymentRecordResponse;
 import com.viettel.deliverymanagement.dto.response.QrPaymentResponse;
+import com.viettel.deliverymanagement.dto.response.ManualPaymentInstructionResponse;
 import com.viettel.deliverymanagement.entity.OrderEntity;
 import com.viettel.deliverymanagement.entity.ShipmentEntity;
 import com.viettel.deliverymanagement.entity.UserEntity;
@@ -46,6 +48,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
     private final VNPayConfig vnPayConfig;
+    private final ManualPaymentConfig manualPaymentConfig;
 
     @Value("${vietqr.bank-id:}") private String qrBankId;
     @Value("${vietqr.account-number:}") private String qrAccountNumber;
@@ -218,6 +221,51 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<PaymentMethod> getAvailablePaymentMethods() {
+        return manualPaymentConfig.availableMethods();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ManualPaymentInstructionResponse getManualPaymentInstructions(Long orderId, String username) {
+        OrderEntity order = findAccessibleOrder(orderId, username);
+        PaymentMethod method = order.getPaymentMethod();
+        if (!method.isManualPayment()) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Đơn hàng không dùng phương thức thanh toán thủ công");
+        }
+        if (!manualPaymentConfig.isAvailable(method)) {
+            throw new AppException("PAYMENT_METHOD_DISABLED", "Phương thức thanh toán hiện chưa được cấu hình");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.FAILED) {
+            throw new AppException("INVALID_PAYMENT_STATUS", "Yêu cầu thanh toán đã đóng");
+        }
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new AppException("PAYMENT_ALREADY_PAID", "Đơn hàng đã được thanh toán");
+        }
+
+        String transferContent = "THANHTOAN " + order.getTrackingNumber();
+        if (method == PaymentMethod.MANUAL_BANK_TRANSFER) {
+            return ManualPaymentInstructionResponse.builder()
+                    .orderId(orderId).method(method).title("Chuyển khoản ngân hàng")
+                    .providerName(manualPaymentConfig.getBankName()).recipientLabel("Số tài khoản")
+                    .recipientValue(manualPaymentConfig.getBankAccountNumber())
+                    .recipientName(manualPaymentConfig.getBankAccountName()).amount(order.getTotalFee())
+                    .transferContent(transferContent)
+                    .note("Chuyển đúng số tiền và nội dung. Đơn được kích hoạt sau khi nhân viên đối soát sao kê.")
+                    .build();
+        }
+        return ManualPaymentInstructionResponse.builder()
+                .orderId(orderId).method(method).title("Chuyển tiền qua MoMo")
+                .providerName("MoMo").recipientLabel("Số điện thoại MoMo")
+                .recipientValue(manualPaymentConfig.getMomoPhone())
+                .recipientName(manualPaymentConfig.getMomoAccountName()).amount(order.getTotalFee())
+                .transferContent(transferContent)
+                .note("Chuyển đúng số tiền và nội dung. Đơn được kích hoạt sau khi nhân viên đối soát giao dịch.")
+                .build();
+    }
+
+    @Override
     @Transactional
     public QrPaymentResponse getQrPayment(Long orderId, String username) {
         requireQrConfiguration();
@@ -243,8 +291,8 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentRecordResponse confirmPayment(Long orderId, String reference) {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
-        if (order.getPaymentMethod() != PaymentMethod.VCB_QR) {
-            throw new AppException("INVALID_PAYMENT_METHOD", "Chỉ có thể xác nhận thủ công chuyển khoản ngân hàng");
+        if (!order.getPaymentMethod().requiresManualConfirmation()) {
+            throw new AppException("INVALID_PAYMENT_METHOD", "Chỉ có thể xác nhận các giao dịch thanh toán thủ công");
         }
         if (order.getPaymentStatus() == PaymentStatus.PAID) return toRecord(order);
         if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PENDING) {

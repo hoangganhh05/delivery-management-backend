@@ -4,8 +4,10 @@ import com.viettel.deliverymanagement.dto.response.PaymentResponse;
 import com.viettel.deliverymanagement.dto.response.ResponseData;
 import com.viettel.deliverymanagement.dto.response.PaymentRecordResponse;
 import com.viettel.deliverymanagement.dto.response.QrPaymentResponse;
+import com.viettel.deliverymanagement.dto.response.ManualPaymentInstructionResponse;
 import com.viettel.deliverymanagement.dto.request.ConfirmPaymentRequest;
 import com.viettel.deliverymanagement.service.PaymentService;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/payment")
 @RequiredArgsConstructor
-@Tag(name = "Payment Controller", description = "APIs thanh toán trực tuyến qua cổng VNPay")
+@Tag(name = "Payment Controller", description = "APIs thanh toán trực tuyến và đối soát thủ công")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -41,6 +43,18 @@ public class PaymentController {
     @GetMapping("/orders/{orderId}")
     public ResponseData<PaymentRecordResponse> getPayment(@PathVariable Long orderId, Authentication authentication) {
         return ResponseData.success("Lấy thanh toán thành công", paymentService.getPayment(orderId, authentication.getName()));
+    }
+
+    @GetMapping("/methods")
+    public ResponseData<List<PaymentMethod>> getAvailableMethods() {
+        return ResponseData.success("Lấy phương thức thanh toán khả dụng thành công", paymentService.getAvailablePaymentMethods());
+    }
+
+    @GetMapping("/orders/{orderId}/instructions")
+    public ResponseData<ManualPaymentInstructionResponse> getManualPaymentInstructions(
+            @PathVariable Long orderId, Authentication authentication) {
+        return ResponseData.success("Lấy hướng dẫn thanh toán thành công",
+                paymentService.getManualPaymentInstructions(orderId, authentication.getName()));
     }
 
     @GetMapping("/orders/{orderId}/qr")

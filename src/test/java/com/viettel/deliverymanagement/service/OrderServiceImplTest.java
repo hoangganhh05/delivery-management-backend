@@ -4,6 +4,7 @@ import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.PaymentMethod;
 import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.constant.Role;
+import com.viettel.deliverymanagement.config.ManualPaymentConfig;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.response.OrderResponse;
@@ -45,6 +46,9 @@ class OrderServiceImplTest {
 
     @Mock
     private ShipmentRepository shipmentRepository;
+
+    @Mock
+    private ManualPaymentConfig manualPaymentConfig;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -187,6 +191,24 @@ class OrderServiceImplTest {
 
         when(userRepository.findByUsername("customer"))
                 .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.createOrder(request, "customer")
+        );
+
+        assertEquals("PAYMENT_METHOD_DISABLED", exception.getCode());
+        verify(orderRepository, never()).save(any(OrderEntity.class));
+    }
+
+    @Test
+    @DisplayName("Không cho tạo đơn bằng phương thức thủ công chưa được cấu hình")
+    void createOrder_RejectsUnconfiguredManualPayment() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setPaymentMethod(PaymentMethod.MANUAL_MOMO);
+        when(userRepository.findByUsername("customer"))
+                .thenReturn(Optional.of(testUser(2L, "customer", Role.CUSTOMER)));
+        when(manualPaymentConfig.isAvailable(PaymentMethod.MANUAL_MOMO)).thenReturn(false);
+
         AppException exception = assertThrows(
                 AppException.class,
                 () -> orderService.createOrder(request, "customer")

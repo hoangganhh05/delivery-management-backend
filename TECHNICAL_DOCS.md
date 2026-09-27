@@ -12,7 +12,7 @@ Hệ thống được xây dựng nhằm giải quyết bài toán giao nhận v
 2. **Quản lý shipper:** Quản lý hồ sơ nhân viên giao hàng, số lượng đơn đang phụ trách, trạng thái sẵn sàng nhận đơn.
 3. **Quản lý đơn hàng:** Khởi tạo đơn hàng, quản lý danh sách mặt hàng, tính toán khối lượng, cước phí và tiền thu hộ COD.
 4. **Điều phối phân công vận chuyển:** Phân công đơn hàng mới cho nhân viên Shipper phù hợp, hỗ trợ ghi chú giao hàng.
-5. **Thanh toán:** Đơn mới dùng COD. Luồng QR ngân hàng cũ đã được ngừng cho đơn mới; endpoint VNPay chỉ hoạt động khi được cấu hình riêng.
+5. **Thanh toán:** Đơn mới có COD và có thể bật chuyển khoản ngân hàng/MoMo thủ công. Khách nhận hướng dẫn chuyển tiền theo mã vận đơn; nhân viên chỉ xác nhận sau khi đối soát sao kê. Luồng QR ngân hàng cũ đã được ngừng cho đơn mới; endpoint VNPay chỉ hoạt động khi được cấu hình riêng.
 6. **Tracking theo dõi:** Tra cứu tiến trình công khai qua mã vận đơn với dữ liệu cá nhân/tài chính đã được ẩn; người dùng đã đăng nhập mới xem được chi tiết nghiệp vụ.
 7. **Tính phí & Voucher:** Kiểm tra tính hợp lệ của mã giảm giá (thời hạn, giá trị đơn tối thiểu, số lượt dùng) và tự động khấu trừ cước phí giao hàng.
 8. **Thông báo (Notification):** Tự động phát sinh thông báo khi đơn hàng được phân công hoặc thay đổi trạng thái, tích hợp chuông thông báo trên giao diện.

@@ -4,6 +4,7 @@ import com.viettel.deliverymanagement.constant.OrderStatus;
 import com.viettel.deliverymanagement.constant.Role;
 import com.viettel.deliverymanagement.constant.PaymentStatus;
 import com.viettel.deliverymanagement.constant.PaymentMethod;
+import com.viettel.deliverymanagement.config.ManualPaymentConfig;
 import com.viettel.deliverymanagement.dto.request.CreateOrderRequest;
 import com.viettel.deliverymanagement.dto.request.OrderItemRequest;
 import com.viettel.deliverymanagement.dto.request.OrderSearchRequest;
@@ -49,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
     private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
     private final ShipmentRepository shipmentRepository;
+    private final ManualPaymentConfig manualPaymentConfig;
 
     @Override
     @Transactional
@@ -59,6 +61,12 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(
                     "PAYMENT_METHOD_DISABLED",
                     "Chuyển khoản QR ngân hàng không còn được hỗ trợ cho đơn hàng mới"
+            );
+        }
+        if (paymentMethod.isManualPayment() && !manualPaymentConfig.isAvailable(paymentMethod)) {
+            throw new AppException(
+                    "PAYMENT_METHOD_DISABLED",
+                    "Phương thức thanh toán chưa được cấu hình hoặc đang tạm ngừng"
             );
         }
         // 1. Sinh mã vận đơn tự động (Tracking Number)

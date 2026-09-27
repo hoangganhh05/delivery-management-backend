@@ -3,6 +3,8 @@ package com.viettel.deliverymanagement.service;
 import com.viettel.deliverymanagement.dto.response.PaymentResponse;
 import com.viettel.deliverymanagement.dto.response.PaymentRecordResponse;
 import com.viettel.deliverymanagement.dto.response.QrPaymentResponse;
+import com.viettel.deliverymanagement.dto.response.ManualPaymentInstructionResponse;
+import com.viettel.deliverymanagement.constant.PaymentMethod;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
@@ -16,6 +18,8 @@ public interface PaymentService {
 
     List<PaymentRecordResponse> getPayments();
     PaymentRecordResponse getPayment(Long orderId, String username);
+    List<PaymentMethod> getAvailablePaymentMethods();
+    ManualPaymentInstructionResponse getManualPaymentInstructions(Long orderId, String username);
     QrPaymentResponse getQrPayment(Long orderId, String username);
     PaymentRecordResponse confirmPayment(Long orderId, String reference);
 }
