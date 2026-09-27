@@ -3,7 +3,7 @@ package db.migration;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-public class V9__Create_shipment_offers extends BaseJavaMigration {
+public class V10__Create_shipment_offers extends BaseJavaMigration {
     @Override
     public void migrate(Context context) throws Exception {
         try (var statement = context.getConnection().createStatement()) {
