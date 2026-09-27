@@ -73,11 +73,10 @@ public class OrderServiceImpl implements OrderService {
         String trackingNumber = "VT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         String serviceType = request.getServiceType() == null ? "STANDARD" : request.getServiceType();
-        BigDecimal shippingFee = switch (serviceType) {
-            case "STANDARD" -> BigDecimal.valueOf(30000);
-            case "EXPRESS" -> BigDecimal.valueOf(50000);
-            default -> throw new AppException("INVALID_SERVICE_TYPE", "Gói giao hàng không hợp lệ");
-        };
+        BigDecimal shippingFee = calculateShippingFee(request.getWeightGram(), request.getDistanceKm(), serviceType);
+        if (shippingFee == null) {
+            throw new AppException("INVALID_SHIPPING_DISTANCE", "Không thể tính phí giao hàng với khoảng cách này");
+        }
         if (request.getShippingFee() == null || request.getShippingFee().compareTo(shippingFee) != 0) {
             throw new AppException("SHIPPING_FEE_MISMATCH", "Phí giao hàng đã thay đổi, vui lòng tải lại và thử lại");
         }
@@ -345,6 +344,30 @@ public class OrderServiceImpl implements OrderService {
     private UserEntity requireUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy thông tin người dùng"));
+    }
+
+    /**
+     * Biểu phí: gói tiêu chuẩn 30.000đ cho 2km đầu;
+     * mỗi 5km tiếp theo +5.000đ. Khối lượng vẫn được kiểm tra nhưng không cộng phí.
+     * Hỏa tốc nhân 1,5 lần. Làm tròn lên theo từng mốc để không thu thiếu.
+     */
+    private BigDecimal calculateShippingFee(Integer weightGram, BigDecimal distanceKm, String serviceType) {
+        if (weightGram == null || weightGram <= 0 || distanceKm == null
+                || distanceKm.compareTo(BigDecimal.ZERO) <= 0 || distanceKm.compareTo(BigDecimal.valueOf(5000)) > 0) {
+            return null;
+        }
+        long extraDistanceBands = distanceKm.subtract(BigDecimal.valueOf(2))
+                .max(BigDecimal.ZERO)
+                .divide(BigDecimal.valueOf(5), 0, RoundingMode.CEILING)
+                .longValue();
+        BigDecimal fee = BigDecimal.valueOf(30000)
+                .add(BigDecimal.valueOf(extraDistanceBands * 5000));
+        if ("EXPRESS".equals(serviceType)) {
+            fee = fee.multiply(BigDecimal.valueOf(1.5));
+        } else if (!"STANDARD".equals(serviceType)) {
+            throw new AppException("INVALID_SERVICE_TYPE", "Gói giao hàng không hợp lệ");
+        }
+        return fee.setScale(0, RoundingMode.HALF_UP);
     }
 
     private void assertCanAccess(OrderEntity order, UserEntity user) {

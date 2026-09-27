@@ -65,6 +65,7 @@ class OrderServiceImplTest {
         request.setReceiverPhone("0912345678");
         request.setReceiverAddress("Số 10 Pham Van Dong, Cau Giay, Ha Noi");
         request.setWeightGram(1200);
+        request.setDistanceKm(BigDecimal.ONE);
         request.setShippingFee(BigDecimal.valueOf(30000));
         request.setCodAmount(BigDecimal.valueOf(200000));
 
@@ -241,6 +242,7 @@ class OrderServiceImplTest {
         request.setReceiverPhone("0912345678");
         request.setReceiverAddress("Hai Phong");
         request.setWeightGram(500);
+        request.setDistanceKm(BigDecimal.ONE);
         request.setShippingFee(BigDecimal.valueOf(30000));
         request.setVoucherCode("NOT_FOUND");
 
@@ -275,6 +277,7 @@ class OrderServiceImplTest {
         request.setReceiverPhone("0912345678");
         request.setReceiverAddress("Hai Phong");
         request.setWeightGram(500);
+        request.setDistanceKm(BigDecimal.ONE);
         request.setShippingFee(BigDecimal.valueOf(30000));
         request.setVoucherCode("LASTONE");
 
