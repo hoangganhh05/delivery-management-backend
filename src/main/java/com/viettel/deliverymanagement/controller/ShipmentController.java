@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +44,30 @@ public class ShipmentController {
             Authentication authentication) {
         shipmentService.updateShipmentStatus(orderId, request, authentication.getName());
         return ResponseData.success("Cập nhật trạng thái giao hàng thành công", null);
+    }
+
+    @PostMapping("/shipments/auto-assign/{orderId}")
+    @PreAuthorize("@permissionService.has(authentication, 'ASSIGN_SHIPPER')")
+    public ResponseData<Void> autoAssign(@PathVariable Long orderId) {
+        shipmentService.autoAssign(orderId);
+        return ResponseData.success("Đã gửi lời mời cho shipper", null);
+    }
+
+    @GetMapping("/shipments/offers")
+    public ResponseData<?> pendingOffers(Authentication authentication) {
+        return ResponseData.success("Lấy lời mời thành công", shipmentService.getPendingOffers(authentication.getName()));
+    }
+
+    @PostMapping("/shipments/offers/{offerId}/accept")
+    public ResponseData<Void> acceptOffer(@PathVariable Long offerId, Authentication authentication) {
+        shipmentService.acceptOffer(offerId, authentication.getName());
+        return ResponseData.success("Đã nhận đơn", null);
+    }
+
+    @PostMapping("/shipments/offers/{offerId}/decline")
+    public ResponseData<Void> declineOffer(@PathVariable Long offerId, Authentication authentication) {
+        shipmentService.declineOffer(offerId, authentication.getName());
+        return ResponseData.success("Đã từ chối đơn", null);
     }
 
     @PutMapping("/shipments/orders/{orderId}/location")

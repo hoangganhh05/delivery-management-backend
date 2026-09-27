@@ -14,6 +14,12 @@ import com.viettel.deliverymanagement.exception.AppException;
 import com.viettel.deliverymanagement.repository.OrderRepository;
 import com.viettel.deliverymanagement.repository.ShipmentRepository;
 import com.viettel.deliverymanagement.repository.UserRepository;
+import com.viettel.deliverymanagement.repository.ShipmentOfferRepository;
+import com.viettel.deliverymanagement.entity.ShipmentOfferEntity;
+import com.viettel.deliverymanagement.dto.response.ShipmentOfferResponse;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.time.LocalDateTime;
+import java.util.*;
 import com.viettel.deliverymanagement.service.NotificationService;
 import com.viettel.deliverymanagement.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +36,78 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final ShipmentOfferRepository offerRepository;
+
+    private static final long OFFER_MINUTES = 2;
+
+    @Override
+    @Transactional
+    public void autoAssign(Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId).orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        if (order.isAwaitingOnlinePayment()) throw new AppException("PAYMENT_REQUIRED", "Cần xác nhận thanh toán trước khi phân công");
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PAID)
+            throw new AppException("INVALID_ORDER_STATUS", "Đơn hàng không ở trạng thái chờ phân công");
+        offerNext(order);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public List<ShipmentOfferResponse> getPendingOffers(String username) {
+        UserEntity shipper = userRepository.findByUsername(username).orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy shipper"));
+        if (shipper.getRole() != Role.SHIPPER) throw new AppException("INVALID_SHIPPER", "Tài khoản không phải shipper");
+        LocalDateTime now = LocalDateTime.now();
+        return offerRepository.findByShipperIdAndStatusOrderByExpiresAtAsc(shipper.getId(), "PENDING").stream()
+                .filter(o -> o.getExpiresAt().isAfter(now)).map(this::toOffer).toList();
+    }
+
+    @Override @Transactional
+    public void acceptOffer(Long offerId, String username) {
+        UserEntity shipper = userRepository.findByUsername(username).orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy shipper"));
+        ShipmentOfferEntity offer = offerRepository.findByIdForUpdate(offerId).orElseThrow(() -> new AppException("OFFER_NOT_FOUND", "Không tìm thấy lời mời"));
+        if (!Objects.equals(offer.getShipperId(), shipper.getId())) throw new AppException("OFFER_ACCESS_DENIED", "Bạn không được nhận lời mời này");
+        if (!"PENDING".equals(offer.getStatus()) || !offer.getExpiresAt().isAfter(LocalDateTime.now())) throw new AppException("OFFER_EXPIRED", "Lời mời đã hết hạn");
+        OrderEntity order = orderRepository.findById(offer.getOrderId()).orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PAID) throw new AppException("OFFER_UNAVAILABLE", "Đơn hàng đã được nhận");
+        offer.setStatus("ACCEPTED"); offer.setRespondedAt(LocalDateTime.now()); offerRepository.save(offer);
+        order.setStatus(OrderStatus.ASSIGNED); orderRepository.save(order);
+        shipmentRepository.save(ShipmentEntity.builder().orderId(order.getId()).shipperId(shipper.getId()).status(OrderStatus.ASSIGNED).note("Nhận từ phân công tự động").build());
+    }
+
+    @Override @Transactional
+    public void declineOffer(Long offerId, String username) {
+        UserEntity shipper = userRepository.findByUsername(username).orElseThrow(() -> new AppException("USER_NOT_FOUND", "Không tìm thấy shipper"));
+        ShipmentOfferEntity offer = offerRepository.findByIdForUpdate(offerId).orElseThrow(() -> new AppException("OFFER_NOT_FOUND", "Không tìm thấy lời mời"));
+        if (!Objects.equals(offer.getShipperId(), shipper.getId())) throw new AppException("OFFER_ACCESS_DENIED", "Bạn không được từ chối lời mời này");
+        if (!"PENDING".equals(offer.getStatus())) return;
+        offer.setStatus("DECLINED"); offer.setRespondedAt(LocalDateTime.now()); offerRepository.save(offer);
+        OrderEntity order = orderRepository.findById(offer.getOrderId()).orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.PAID) offerNext(order);
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    @Transactional
+    public void expireOffers() {
+        for (ShipmentOfferEntity offer : offerRepository.findByStatusAndExpiresAtBefore("PENDING", LocalDateTime.now())) {
+            offer.setStatus("EXPIRED"); offer.setRespondedAt(LocalDateTime.now()); offerRepository.save(offer);
+            orderRepository.findById(offer.getOrderId()).ifPresent(order -> {
+                if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.PAID) offerNext(order);
+            });
+        }
+    }
+
+    private void offerNext(OrderEntity order) {
+        List<UserEntity> candidates = new ArrayList<>(userRepository.findByRole(Role.SHIPPER));
+        candidates.removeIf(s -> !"ACTIVE".equalsIgnoreCase(s.getStatus()) || offerRepository.existsByOrderIdAndShipperIdAndStatus(order.getId(), s.getId(), "PENDING") || offerRepository.existsByOrderIdAndShipperIdAndStatus(order.getId(), s.getId(), "ACCEPTED"));
+        if (candidates.isEmpty()) throw new AppException("NO_AVAILABLE_SHIPPER", "Không còn shipper đang hoạt động");
+        Collections.shuffle(candidates);
+        UserEntity shipper = candidates.get(0);
+        offerRepository.save(ShipmentOfferEntity.builder().orderId(order.getId()).shipperId(shipper.getId()).status("PENDING").expiresAt(LocalDateTime.now().plusMinutes(OFFER_MINUTES)).build());
+        try { notificationService.createNotification(shipper.getId(), "Có đơn hàng mới cần nhận", "Bạn có 2 phút để nhận đơn #" + order.getTrackingNumber(), "SHIPMENT_OFFER", order.getId()); } catch (Exception ignored) { }
+    }
+
+    private ShipmentOfferResponse toOffer(ShipmentOfferEntity offer) {
+        OrderEntity order = orderRepository.findById(offer.getOrderId()).orElseThrow(() -> new AppException("ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        return ShipmentOfferResponse.builder().offerId(offer.getId()).orderId(order.getId()).trackingNumber(order.getTrackingNumber()).receiverName(order.getReceiverName()).receiverAddress(order.getReceiverAddress()).expiresAt(offer.getExpiresAt()).build();
+    }
 
     @Override
     @Transactional
