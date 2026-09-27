@@ -249,6 +249,7 @@ public class PaymentServiceImpl implements PaymentService {
             return ManualPaymentInstructionResponse.builder()
                     .orderId(orderId).method(method).title("Chuyển khoản ngân hàng")
                     .providerName(manualPaymentConfig.getBankName()).recipientLabel("Số tài khoản")
+                    .bankId(manualPaymentConfig.getBankId().trim())
                     .recipientValue(manualPaymentConfig.getBankAccountNumber())
                     .recipientName(manualPaymentConfig.getBankAccountName()).amount(order.getTotalFee())
                     .transferContent(transferContent)

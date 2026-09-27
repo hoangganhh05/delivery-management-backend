@@ -13,6 +13,7 @@ public class ManualPaymentInstructionResponse {
     private PaymentMethod method;
     private String title;
     private String providerName;
+    private String bankId;
     private String recipientLabel;
     private String recipientValue;
     private String recipientName;

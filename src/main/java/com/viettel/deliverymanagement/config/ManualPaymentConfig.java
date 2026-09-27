@@ -19,6 +19,9 @@ public class ManualPaymentConfig {
     @Value("${manual-payment.bank.enabled:false}")
     private boolean bankTransferEnabled;
 
+    @Value("${manual-payment.bank.id:}")
+    private String bankId;
+
     @Value("${manual-payment.bank.name:}")
     private String bankName;
 
@@ -41,7 +44,7 @@ public class ManualPaymentConfig {
         return switch (method) {
             case COD -> true;
             case MANUAL_BANK_TRANSFER -> bankTransferEnabled
-                    && hasText(bankName) && hasText(bankAccountNumber) && hasText(bankAccountName);
+                    && hasBankId() && hasText(bankName) && hasText(bankAccountNumber) && hasText(bankAccountName);
             case MANUAL_MOMO -> momoEnabled && hasText(momoPhone) && hasText(momoAccountName);
             default -> false;
         };
@@ -60,5 +63,9 @@ public class ManualPaymentConfig {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean hasBankId() {
+        return hasText(bankId) && bankId.trim().matches("[A-Za-z0-9_-]{2,16}");
     }
 }

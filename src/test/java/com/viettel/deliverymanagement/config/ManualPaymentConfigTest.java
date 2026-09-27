@@ -14,6 +14,7 @@ class ManualPaymentConfigTest {
     void onlyCodIsAvailableUntilManualRecipientDetailsAreComplete() {
         ManualPaymentConfig config = new ManualPaymentConfig();
         ReflectionTestUtils.setField(config, "bankTransferEnabled", true);
+        ReflectionTestUtils.setField(config, "bankId", "VCB");
         ReflectionTestUtils.setField(config, "bankName", "VCB");
         ReflectionTestUtils.setField(config, "bankAccountNumber", "0123456789");
 
@@ -21,5 +22,17 @@ class ManualPaymentConfigTest {
 
         ReflectionTestUtils.setField(config, "bankAccountName", "Delivery Test");
         assertEquals(List.of(PaymentMethod.COD, PaymentMethod.MANUAL_BANK_TRANSFER), config.availableMethods());
+    }
+
+    @Test
+    void bankTransferRequiresAValidVietQrBankId() {
+        ManualPaymentConfig config = new ManualPaymentConfig();
+        ReflectionTestUtils.setField(config, "bankTransferEnabled", true);
+        ReflectionTestUtils.setField(config, "bankId", "invalid bank id");
+        ReflectionTestUtils.setField(config, "bankName", "Vietcombank");
+        ReflectionTestUtils.setField(config, "bankAccountNumber", "0123456789");
+        ReflectionTestUtils.setField(config, "bankAccountName", "Delivery Test");
+
+        assertEquals(List.of(PaymentMethod.COD), config.availableMethods());
     }
 }

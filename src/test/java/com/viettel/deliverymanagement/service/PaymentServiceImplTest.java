@@ -121,6 +121,28 @@ class PaymentServiceImplTest {
         assertEquals("THANHTOAN VT12345678", instructions.getTransferContent());
     }
 
+    @Test
+    void manualBankInstructions_IncludeVietQrBankIdForTheConfiguredRecipient() {
+        OrderEntity order = pendingOrder(PaymentMethod.MANUAL_BANK_TRANSFER);
+        order.setSenderId(2L);
+        UserEntity customer = UserEntity.builder().username("customer").role(Role.CUSTOMER).build();
+        customer.setId(2L);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(userRepository.findByUsername("customer")).thenReturn(Optional.of(customer));
+        when(manualPaymentConfig.isAvailable(PaymentMethod.MANUAL_BANK_TRANSFER)).thenReturn(true);
+        when(manualPaymentConfig.getBankId()).thenReturn("VCB");
+        when(manualPaymentConfig.getBankName()).thenReturn("Vietcombank");
+        when(manualPaymentConfig.getBankAccountNumber()).thenReturn("0123456789");
+        when(manualPaymentConfig.getBankAccountName()).thenReturn("Delivery Test");
+
+        var instructions = paymentService.getManualPaymentInstructions(1L, "customer");
+
+        assertNotNull(instructions);
+        assertEquals(PaymentMethod.MANUAL_BANK_TRANSFER, instructions.getMethod());
+        assertEquals("VCB", instructions.getBankId());
+        assertEquals("0123456789", instructions.getRecipientValue());
+    }
+
     private OrderEntity pendingOrder(PaymentMethod method) {
         return OrderEntity.builder().id(1L).trackingNumber("VT12345678")
                 .senderName("Khach hang").totalFee(BigDecimal.valueOf(30000))
