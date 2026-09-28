@@ -94,9 +94,17 @@ public class GeminiClientService {
                 JsonNode resJson = objectMapper.readTree(response.body());
                 JsonNode candidates = resJson.path("candidates");
                 if (candidates.isArray() && !candidates.isEmpty()) {
-                    JsonNode textNode = candidates.get(0).path("content").path("parts").get(0).path("text");
-                    if (!textNode.isMissingNode()) {
-                        return Optional.of(textNode.asText());
+                    JsonNode partsNode = candidates.get(0).path("content").path("parts");
+                    if (partsNode.isArray() && !partsNode.isEmpty()) {
+                        StringBuilder sb = new StringBuilder();
+                        for (JsonNode part : partsNode) {
+                            if (part.has("text")) {
+                                sb.append(part.path("text").asText());
+                            }
+                        }
+                        if (sb.length() > 0) {
+                            return Optional.of(sb.toString().trim());
+                        }
                     }
                 }
             } else {

@@ -412,15 +412,76 @@ public class AiServiceImpl implements AiService {
                     .build();
         }
 
+        if (lower.contains("tra cứu") || lower.contains("đơn hàng") || lower.contains("mã vận đơn") || lower.contains("đơn")) {
+            return AiChatResponse.builder()
+                    .reply("Để tra cứu thông tin và tiến trình giao hàng theo thời gian thực, bạn vui lòng nhập mã vận đơn cụ thể nhé (ví dụ: `VT12345678`).\n\nBạn có thể xem mã vận đơn trong tab **Tạo & Quản Lý Đơn** hoặc trên phiếu gửi hàng để em kiểm tra ngay cho bạn ạ!")
+                    .suggestedAction("NONE")
+                    .quickQuestions(List.of("Cách tính phí vận chuyển", "Thời gian giao hàng mất bao lâu?", "Chính sách bồi thường", "Voucher hôm nay"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("bồi thường") || lower.contains("bảo hiểm") || lower.contains("mất hàng") || lower.contains("hỏng")) {
+            return AiChatResponse.builder()
+                    .reply("Chính sách bồi thường hàng hóa của Viettel Delivery (GiaoTín):\n" +
+                            "- **Hàng có khai giá/bảo hiểm**: Bồi thường lên tới 100% giá trị thiệt hại thực tế theo giá trị khai báo khi tạo đơn.\n" +
+                            "- **Hàng không khai giá**: Bồi thường tối đa gấp 4 lần cước phí vận chuyển theo quy định pháp luật bưu chính.\n" +
+                            "- Thời gian xử lý khiếu nại minh bạch trong vòng 24 - 48 giờ làm việc.")
+                    .suggestedAction("NONE")
+                    .quickQuestions(List.of("Cách khai báo giá trị hàng", "Tính phí giao hàng", "Tra cứu đơn hàng"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("voucher") || lower.contains("khuyến mãi") || lower.contains("giảm giá") || lower.contains("mã ưu đãi")) {
+            return AiChatResponse.builder()
+                    .reply("Danh sách mã giảm giá Viettel Delivery đang áp dụng:\n" +
+                            "- `VIETTEL50`: Giảm 50% cước phí giao hàng (tối đa 50.000đ cho đơn từ 100.000đ).\n" +
+                            "- `FREESHIP`: Miễn phí giao hàng 100% (tối đa 30.000đ cho đơn từ 50.000đ).\n" +
+                            "- `VIETTEL20`: Giảm 20% phí giao hàng cho tất cả đơn từ 50.000đ.\n" +
+                            "Bạn hãy nhập mã này tại **Bước 5: Mã giảm giá** khi tạo đơn nhé!")
+                    .suggestedAction("CREATE_ORDER")
+                    .quickQuestions(List.of("Cách tính phí vận chuyển", "Thời gian giao hàng", "Tra cứu đơn hàng"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("thanh toán") || lower.contains("cod") || lower.contains("chuyển khoản") || lower.contains("tiền mặt") || lower.contains("momo")) {
+            return AiChatResponse.builder()
+                    .reply("Viettel Delivery hỗ trợ các phương thức thanh toán linh hoạt:\n" +
+                            "1. **Thanh toán khi nhận hàng (COD)**: Người nhận thanh toán tiền hàng + cước trực tiếp cho shipper khi nhận bưu phẩm.\n" +
+                            "2. **Chuyển khoản VietQR / MoMo**: Quét mã QR chuyển khoản chính xác khi tạo đơn hoặc khi shipper giao tới.\n" +
+                            "3. Tiền COD thu hộ sẽ được đối soát và hoàn trả tự động vào tài khoản ngân hàng của bạn!")
+                    .suggestedAction("NONE")
+                    .quickQuestions(List.of("Cách tính phí vận chuyển", "Chính sách bồi thường", "Voucher hôm nay"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("chào") || lower.contains("hi") || lower.contains("hello") || lower.contains("hey")) {
+            return AiChatResponse.builder()
+                    .reply("Dạ em chào bạn! Em là **GiaoTín AI** - Trợ lý hỗ trợ giao nhận thông minh của Viettel Delivery.\n\n" +
+                            "Em sẵn sàng hỗ trợ bạn:\n" +
+                            "- 🔍 **Tra cứu đơn hàng**: Gửi mã vận đơn dạng `VT12345678`\n" +
+                            "- 💰 **Báo giá cước & dịch vụ**: Gói Tiêu chuẩn, Hỏa tốc, tiền thu hộ COD\n" +
+                            "- 🎟️ **Mã giảm giá & Khuyến mãi**: Lấy mã voucher mới nhất\n" +
+                            "- 🛡️ **Chính sách bồi thường & Thời gian giao hàng**\n\n" +
+                            "Hôm nay bạn cần em hỗ trợ điều gì ạ?")
+                    .suggestedAction("NONE")
+                    .quickQuestions(List.of("Cách tính phí vận chuyển", "Thời gian giao hàng mất bao lâu?", "Chính sách bồi thường", "Voucher hôm nay"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
         return AiChatResponse.builder()
-                .reply("Xin chào! Em là **GiaoTín AI** - Trợ lý hỗ trợ giao nhận Viettel Delivery.\n" +
+                .reply("Xin chào! Em là **GiaoTín AI** - Trợ lý hỗ trợ giao nhận Viettel Delivery.\n\n" +
                         "Em có thể giúp bạn:\n" +
-                        "1. **Tra cứu đơn hàng**: Bạn chỉ cần gửi mã vận đơn (ví dụ: `VT12345678`).\n" +
+                        "1. **Tra cứu đơn hàng**: Gửi mã vận đơn dạng `VT...` (ví dụ: `VT12345678`).\n" +
                         "2. **Tư vấn cước phí & dịch vụ**: Gói Tiêu chuẩn, Hỏa tốc, tiền thu hộ COD.\n" +
-                        "3. **Tạo đơn siêu tốc**: Trích xuất địa chỉ tự động từ tin nhắn Zalo/SMS.\n" +
+                        "3. **Tạo đơn siêu tốc**: Trích xuất địa chỉ tự động từ tin nhắn Zalo/SMS.\n\n" +
                         "Hôm nay bạn cần em hỗ trợ điều gì ạ?")
                 .suggestedAction("NONE")
-                .quickQuestions(List.of("Tra cứu đơn hàng", "Cách tính phí vận chuyển", "Voucher hôm nay", "Chính sách bồi thường"))
+                .quickQuestions(List.of("Cách tính phí vận chuyển", "Thời gian giao hàng mất bao lâu?", "Chính sách bồi thường", "Voucher hôm nay"))
                 .source("ASSISTANT_KNOWLEDGE_BASE")
                 .build();
     }
