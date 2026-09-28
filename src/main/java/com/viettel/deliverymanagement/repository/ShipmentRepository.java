@@ -20,4 +20,6 @@ public interface ShipmentRepository extends JpaRepository<ShipmentEntity, Long> 
 
     @Query("select distinct s.orderId from ShipmentEntity s where s.shipperId = :shipperId")
     List<Long> findDistinctOrderIdsByShipperId(@Param("shipperId") Long shipperId);
+
+    Optional<ShipmentEntity> findFirstByShipperIdAndCurrentLatitudeIsNotNullOrderByIdDesc(Long shipperId);
 }

@@ -37,6 +37,8 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ShipmentOfferRepository offerRepository;
+    @org.springframework.context.annotation.Lazy
+    private final com.viettel.deliverymanagement.service.AiService aiService;
 
     private static final long OFFER_MINUTES = 2;
 
@@ -98,8 +100,26 @@ public class ShipmentServiceImpl implements ShipmentService {
         List<UserEntity> candidates = new ArrayList<>(userRepository.findByRole(Role.SHIPPER));
         candidates.removeIf(s -> !"ACTIVE".equalsIgnoreCase(s.getStatus()) || offerRepository.existsByOrderIdAndShipperIdAndStatus(order.getId(), s.getId(), "PENDING") || offerRepository.existsByOrderIdAndShipperIdAndStatus(order.getId(), s.getId(), "ACCEPTED"));
         if (candidates.isEmpty()) throw new AppException("NO_AVAILABLE_SHIPPER", "Không còn shipper đang hoạt động");
-        Collections.shuffle(candidates);
-        UserEntity shipper = candidates.get(0);
+
+        // Chọn shipper tối ưu thông qua AI Dispatch Matching (GPS, tải trọng, uy tín)
+        UserEntity shipper = null;
+        try {
+            var recs = aiService.recommendShippers(order.getId());
+            java.util.Set<Long> candidateIds = candidates.stream().map(UserEntity::getId).collect(java.util.stream.Collectors.toSet());
+            for (var rec : recs) {
+                if (candidateIds.contains(rec.getShipperId())) {
+                    shipper = candidates.stream().filter(c -> c.getId().equals(rec.getShipperId())).findFirst().orElse(null);
+                    if (shipper != null) break;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Lỗi khi gợi ý shipper qua AI: {}. Chuyển sang chọn shipper sẵn sàng đầu tiên.", e.getMessage());
+        }
+
+        if (shipper == null) {
+            shipper = candidates.get(0);
+        }
+
         offerRepository.save(ShipmentOfferEntity.builder().orderId(order.getId()).shipperId(shipper.getId()).status("PENDING").expiresAt(LocalDateTime.now().plusMinutes(OFFER_MINUTES)).build());
         try { notificationService.createNotification(shipper.getId(), "Có đơn hàng mới cần nhận", "Bạn có 2 phút để nhận đơn #" + order.getTrackingNumber(), "SHIPMENT_OFFER", order.getId()); } catch (Exception ignored) { }
     }

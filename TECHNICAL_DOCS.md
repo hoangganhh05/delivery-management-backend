@@ -18,6 +18,10 @@ Hệ thống được xây dựng nhằm giải quyết bài toán giao nhận v
 8. **Thông báo (Notification):** Tự động phát sinh thông báo khi đơn hàng được phân công hoặc thay đổi trạng thái, tích hợp chuông thông báo trên giao diện.
 9. **Tài khoản nhận tiền:** Khách hàng có thể lưu tối đa 5 tài khoản để nhận hoàn tiền/đối soát COD. Số tài khoản được mã hóa AES-GCM, API chỉ trả về bốn số cuối; đây không phải liên kết Open Banking và không thu thập mật khẩu/OTP.
 10. **Dashboard & Thống kê:** Báo cáo tổng quan số lượng đơn theo từng trạng thái, tổng doanh thu cước vận chuyển, biểu đồ phân tích trực quan.
+11. **Tính năng thông minh AI (Google Gemini AI & Smart Dispatch):**
+    - **Trợ lý ảo GiaoTín AI Chatbot:** Trực tiếp hỗ trợ khách hàng và người quản trị 24/7, tự động liên kết tra cứu tiến trình đơn hàng theo thời gian thực (Grounding dữ liệu từ TrackingService), giải đáp biểu phí và chính sách vận chuyển.
+    - **Smart Order Parser (NLP):** Nhận diện và trích xuất tự động thông tin người nhận, số điện thoại, địa chỉ chi tiết, tên hàng hóa và số tiền COD từ tin nhắn chốt đơn tự do trên Zalo/SMS/Facebook.
+    - **AI Smart Dispatcher:** Thuật toán chấm điểm và xếp hạng shipper tối ưu dựa trên vị trí GPS thời gian thực (ShipmentEntity), tải trọng đơn đang phụ trách (Load Balancing) và lịch sử giao hàng thành công, thay thế hoàn toàn cơ chế phân công ngẫu nhiên cũ.
 
 ---
 

@@ -59,6 +59,8 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       BOOTSTRAP_ADMIN_FULL_NAME: ${BOOTSTRAP_ADMIN_FULL_NAME:-System Administrator}
       BOOTSTRAP_ADMIN_RESET_PASSWORD: ${BOOTSTRAP_ADMIN_RESET_PASSWORD:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     depends_on:
       mariadb:
         condition: service_healthy
