@@ -210,6 +210,11 @@ public class AiServiceImpl implements AiService {
                 6. Tạo đơn siêu tốc:
                    - Khách có thể dùng tính năng "Nhập nhanh bằng AI" ở mục Tạo & Quản lý đơn để dán tin nhắn SMS/Zalo, AI sẽ tự động phân tích và điền form người nhận.
                 7. Hotline hỗ trợ 24/7: 1900.8095 (miễn phí).
+                8. Báo cáo & Thống kê (Xuất file Excel / CSV):
+                   - Quản trị viên (Admin) có thể vào mục "Báo cáo & Thống kê" trên thanh menu để xem biểu đồ doanh thu, số lượng đơn giao thành công, hiệu suất shipper.
+                   - Để xuất file Excel/CSV: Chọn khoảng thời gian (từ ngày... đến ngày...) -> Bấm nút "Xuất Excel" (hoặc "Tải CSV") ở góc trên bên phải để tải file dữ liệu về máy tính.
+                9. Tính năng điều phối Shipper bằng AI:
+                   - Quản trị viên có thể vào mục "Điều phối & Phân công" -> Bấm "Gợi ý AI" để hệ thống tự động phân tích tọa độ GPS, khoảng cách và tải trọng để chọn shipper tối ưu nhất.
                 """;
 
         Optional<String> geminiReply = geminiClientService.generateContent(
