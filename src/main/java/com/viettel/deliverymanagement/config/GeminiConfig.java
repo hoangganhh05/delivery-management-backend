@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 @Slf4j
 @Configuration
 @ConfigurationProperties(prefix = "gemini")
@@ -29,11 +33,16 @@ public class GeminiConfig {
 
     @jakarta.annotation.PostConstruct
     public void init() {
-        // 1. Thử lấy từ System Environment (Railway, Docker, Heroku, etc.)
+        // 1. Quét biến môi trường hệ thống từ mọi định dạng (Railway, Docker, Heroku, v.v.)
         if (!isConfigured()) {
-            String envKey = System.getenv("GEMINI_API_KEY");
-            if (envKey != null && !envKey.trim().isEmpty()) {
-                this.apiKey = envKey.trim();
+            String[] envVars = {"GEMINI_API_KEY", "gemini_api_key", "GEMINI_KEY", "gemini_key", "GOOGLE_API_KEY"};
+            for (String var : envVars) {
+                String val = System.getenv(var);
+                if (val != null && !val.trim().isEmpty()) {
+                    this.apiKey = val.trim();
+                    log.info("Đã tìm thấy Gemini API Key từ biến môi trường hệ thống: {}", var);
+                    break;
+                }
             }
         }
         if (!isConfigured()) {
@@ -42,33 +51,38 @@ public class GeminiConfig {
                 this.apiKey = sysProp.trim();
             }
         }
-        // 2. Thử đọc từ file .env cục bộ nếu chạy dưới local
+        // 2. Nạp từ file .env cục bộ nếu chạy dưới local
         if (!isConfigured()) {
             try {
-                java.nio.file.Path[] paths = new java.nio.file.Path[]{
-                        java.nio.file.Paths.get(".env"),
-                        java.nio.file.Paths.get("../.env"),
-                        java.nio.file.Paths.get("delivery-management-backend/.env")
+                Path[] paths = new Path[]{
+                        Paths.get(".env"),
+                        Paths.get("../.env"),
+                        Paths.get("delivery-management-backend/.env")
                 };
-                for (java.nio.file.Path p : paths) {
-                    if (java.nio.file.Files.exists(p)) {
-                        for (String line : java.nio.file.Files.readAllLines(p)) {
+                for (Path p : paths) {
+                    if (Files.exists(p)) {
+                        for (String line : Files.readAllLines(p)) {
                             line = line.trim();
-                            if (line.startsWith("GEMINI_API_KEY=") && !isConfigured()) {
-                                this.apiKey = line.substring("GEMINI_API_KEY=".length()).trim().replace("\"", "").replace("'", "");
+                            if ((line.startsWith("GEMINI_API_KEY=") || line.startsWith("GEMINI_KEY=")) && !isConfigured()) {
+                                int eqIdx = line.indexOf('=');
+                                this.apiKey = line.substring(eqIdx + 1).trim().replace("\"", "").replace("'", "");
                             }
                             if (line.startsWith("GEMINI_MODEL=")) {
-                                this.model = line.substring("GEMINI_MODEL=".length()).trim().replace("\"", "").replace("'", "");
+                                int eqIdx = line.indexOf('=');
+                                this.model = line.substring(eqIdx + 1).trim().replace("\"", "").replace("'", "");
                             }
                         }
-                        if (isConfigured()) break;
+                        if (isConfigured()) {
+                            log.info("Đã nạp Gemini API Key từ file cục bộ: {}", p.toAbsolutePath());
+                            break;
+                        }
                     }
                 }
             } catch (Exception ignored) {}
         }
 
         if (isConfigured()) {
-            log.info("Google Gemini AI đã được khởi tạo thành công với model: {}", this.model);
+            log.info("Google Gemini AI client đã sẵn sàng với model: {}", this.model);
         } else {
             log.warn("Gemini API Key chưa được cấu hình. Hệ thống sẽ hoạt động ở chế độ Heuristic Fallback.");
         }

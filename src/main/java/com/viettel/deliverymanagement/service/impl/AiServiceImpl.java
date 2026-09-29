@@ -178,13 +178,38 @@ public class AiServiceImpl implements AiService {
         promptWithContext.append("Khách hàng hỏi: ").append(userMessage);
 
         String systemInstruction = """
-                Bạn là GiaoTín AI - Trợ lý ảo thông minh và ân cần của Hệ thống Quản lý Vận chuyển Viettel Delivery.
-                Vai trò của bạn:
-                1. Hỗ trợ khách hàng tra cứu trạng thái đơn hàng một cách nhanh chóng, chính xác dựa trên [DỮ LIỆU ĐƠN HÀNG THỰC TẾ TRONG HỆ THỐNG] (nếu có).
-                2. Tư vấn cước phí giao hàng: Gói Tiêu chuẩn (30.000đ cho 2km đầu, giao trong 1-2 ngày) và Gói Hỏa tốc (phí nhân 1.5, giao trong 2-4 giờ).
-                3. Giải đáp hình thức thanh toán: COD (thu tiền khi nhận hàng) hoặc chuyển khoản ngân hàng/MoMo thủ công.
-                4. Phong cách giao tiếp: Lịch sự, lễ phép, xưng hô "em" và gọi khách là "anh/chị" hoặc "Quý khách", câu trả lời ngắn gọn, rõ ràng, định dạng markdown đẹp mắt.
-                5. Nếu khách hỏi mã vận đơn mà không tìm thấy dữ liệu, hãy lịch sự thông báo khách kiểm tra lại mã vận đơn (bắt đầu bằng VT, ví dụ VT12345678).
+                Bạn là GiaoTín AI - Trợ lý trí tuệ nhân tạo chuyên nghiệp, ân cần và hiểu biết sâu sắc của Hệ thống Vận chuyển Viettel Delivery (GiaoTín).
+
+                NGUYÊN TẮC HỘI THOẠI & PHONG CÁCH:
+                1. Xưng hô: Tự xưng là "em", gọi khách hàng là "anh/chị" hoặc "Quý khách". Luôn giữ thái độ thân thiện, lịch thiệp, tôn trọng và tận tâm.
+                2. TUYỆT ĐỐI KHÔNG lặp lại câu chào hỏi dài dòng hoặc giới thiệu bản thân nếu cuộc trò chuyện đã diễn ra. Trả lời trực tiếp, thông minh, đúng trọng tâm câu hỏi của khách hàng.
+                3. Trình bày: Định dạng Markdown sạch đẹp, gạch đầu dòng rõ ràng, in đậm các thông tin quan trọng (mã đơn, số tiền, mốc thời gian).
+                4. Với các câu hỏi trò chuyện tổng quát ngoài lề (hỏi thăm, thời tiết, đố vui, toán học...): Hãy trả lời thông minh, dí dỏm, tự nhiên, sau đó khéo léo hỏi xem khách có cần hỗ trợ gì về giao nhận hàng hóa hay không.
+
+                KIẾN THỨC VẬN HÀNH VIETTEL DELIVERY:
+                1. Biểu phí giao hàng:
+                   - Gói Tiêu chuẩn: 30.000đ cho 2km đầu tiên, mỗi 5km tiếp theo cộng thêm 5.000đ. Thời gian giao hàng từ 24h - 48h.
+                   - Gói Hỏa tốc (Express): Áp dụng hệ số 1.5 cước phí so với Tiêu chuẩn. Giao siêu tốc trong 2 - 4 giờ.
+                2. Tra cứu hành trình đơn hàng:
+                   - Cú pháp mã vận đơn: Bắt đầu bằng VT (ví dụ: VT12345678, VT98765432).
+                   - Nếu trong lời nhắc có mục [DỮ LIỆU ĐƠN HÀNG THỰC TẾ TRONG HỆ THỐNG], hãy sử dụng dữ liệu chính xác này để thông báo rõ: mã đơn, người nhận, địa chỉ, trạng thái, shipper và tiến trình giao hàng.
+                   - Nếu khách hỏi mã đơn nhưng không có dữ liệu, hãy lịch sự thông báo khách kiểm tra lại mã hoặc liên hệ hotline.
+                3. Mã giảm giá / Voucher đang áp dụng:
+                   - VIETTEL50: Giảm 50% cước phí giao hàng (tối đa 50.000đ cho đơn từ 100.000đ).
+                   - FREESHIP: Miễn phí giao hàng 100% (tối đa 30.000đ cho đơn từ 50.000đ).
+                   - VIETTEL20: Giảm 20% phí giao hàng cho tất cả đơn từ 50.000đ.
+                   - Nhập mã tại Bước 5 khi tạo đơn trên trang web.
+                4. Chính sách bồi thường hàng hóa:
+                   - Hàng có khai giá: Bồi thường 100% giá trị thiệt hại thực tế theo giá trị khai báo khi tạo đơn.
+                   - Hàng không khai giá: Bồi thường tối đa 4 lần cước phí vận chuyển.
+                   - Thời gian xử lý khiếu nại: 24 - 48 giờ làm việc.
+                5. Hình thức thanh toán:
+                   - Thanh toán khi nhận hàng (COD).
+                   - Quét mã chuyển khoản ngân hàng VietQR hoặc ví MoMo.
+                   - Tiền thu hộ COD được tự động đối soát và hoàn tiền vào tài khoản ngân hàng của người gửi.
+                6. Tạo đơn siêu tốc:
+                   - Khách có thể dùng tính năng "Nhập nhanh bằng AI" ở mục Tạo & Quản lý đơn để dán tin nhắn SMS/Zalo, AI sẽ tự động phân tích và điền form người nhận.
+                7. Hotline hỗ trợ 24/7: 1900.8095 (miễn phí).
                 """;
 
         Optional<String> geminiReply = geminiClientService.generateContent(
@@ -473,15 +498,46 @@ public class AiServiceImpl implements AiService {
                     .build();
         }
 
+        if (lower.contains("tổng đài") || lower.contains("hotline") || lower.contains("liên hệ") || lower.contains("khiếu nại") || lower.contains("gặp người")) {
+            return AiChatResponse.builder()
+                    .reply("Kênh liên hệ hỗ trợ khách hàng Viettel Delivery:\n" +
+                            "- 📞 **Hotline CSKH 24/7**: `1900.8095` (Miễn phí cước gọi).\n" +
+                            "- 📧 **Email tiếp nhận khiếu nại**: cskh@giaotin.viettel.vn\n" +
+                            "- 🏢 **Thời gian làm việc**: Phục vụ tất cả các ngày trong tuần, kể cả ngày lễ và Chủ Nhật.")
+                    .suggestedAction("NONE")
+                    .quickQuestions(List.of("Cách tính phí vận chuyển", "Chính sách bồi thường", "Voucher hôm nay"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("tạo đơn") || lower.contains("gửi hàng") || lower.contains("đặt đơn") || lower.contains("gửi bưu phẩm")) {
+            return AiChatResponse.builder()
+                    .reply("Để gửi hàng nhanh chóng với Viettel Delivery:\n" +
+                            "1. Bấm vào mục **Tạo & Quản Lý Đơn** trên thanh menu.\n" +
+                            "2. Bạn có thể tự điền form từng bước hoặc bấm nút **'Nhập nhanh bằng AI'** để dán tin nhắn khách chốt đơn (Zalo/Facebook), hệ thống sẽ tự động điền form trong 1 giây!\n" +
+                            "3. Chọn gói dịch vụ Tiêu chuẩn hoặc Hỏa tốc và áp mã giảm giá để hoàn tất.")
+                    .suggestedAction("CREATE_ORDER")
+                    .quickQuestions(List.of("Voucher giảm giá hôm nay", "Gói Hỏa tốc giao trong bao lâu?", "Tính phí giao hàng"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
+        if (lower.contains("ở đâu") || lower.contains("bưu cục") || lower.contains("chi nhánh") || lower.contains("kho")) {
+            return AiChatResponse.builder()
+                    .reply("Viettel Delivery có mạng lưới bưu cục và kho trung chuyển bao phủ khắp 63 tỉnh thành cả nước.\n" +
+                            "- Shipper của chúng tôi hỗ trợ **lấy hàng tận nhà miễn phí** khi bạn tạo đơn trên hệ thống.\n" +
+                            "- Bạn chỉ cần tạo đơn online, shipper khu vực gần nhất sẽ tự động nhận lệnh và tới nhận hàng.")
+                    .suggestedAction("CREATE_ORDER")
+                    .quickQuestions(List.of("Cách gửi hàng", "Thời gian giao hàng", "Tra cứu đơn hàng"))
+                    .source("ASSISTANT_KNOWLEDGE_BASE")
+                    .build();
+        }
+
         return AiChatResponse.builder()
-                .reply("Xin chào! Em là **GiaoTín AI** - Trợ lý hỗ trợ giao nhận Viettel Delivery.\n\n" +
-                        "Em có thể giúp bạn:\n" +
-                        "1. **Tra cứu đơn hàng**: Gửi mã vận đơn dạng `VT...` (ví dụ: `VT12345678`).\n" +
-                        "2. **Tư vấn cước phí & dịch vụ**: Gói Tiêu chuẩn, Hỏa tốc, tiền thu hộ COD.\n" +
-                        "3. **Tạo đơn siêu tốc**: Trích xuất địa chỉ tự động từ tin nhắn Zalo/SMS.\n\n" +
-                        "Hôm nay bạn cần em hỗ trợ điều gì ạ?")
+                .reply(String.format("Dạ, về yêu cầu: *\"%s\"*,\n\n" +
+                        "Em luôn sẵn sàng hỗ trợ bạn tốt nhất! Bạn có thể chọn nhanh các thao tác bên dưới hoặc gửi mã vận đơn `VT...` để em kiểm tra ngay nhé:", message))
                 .suggestedAction("NONE")
-                .quickQuestions(List.of("Cách tính phí vận chuyển", "Thời gian giao hàng mất bao lâu?", "Chính sách bồi thường", "Voucher hôm nay"))
+                .quickQuestions(List.of("Cách tính phí vận chuyển", "Gói Hỏa tốc giao trong bao lâu?", "Chính sách bồi thường", "Voucher hôm nay"))
                 .source("ASSISTANT_KNOWLEDGE_BASE")
                 .build();
     }

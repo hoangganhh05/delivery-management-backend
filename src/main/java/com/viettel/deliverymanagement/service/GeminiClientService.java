@@ -31,7 +31,7 @@ public class GeminiClientService {
             .build();
 
     /**
-     * Gọi Google Gemini API để sinh nội dung văn bản hoặc JSON
+     * Gọi Google Gemini API với cơ chế tự động chuyển đổi mô hình (Model Failover)
      */
     public Optional<String> generateContent(String systemInstruction, String userPrompt, List<AiChatMessage> history, boolean jsonOutput) {
         if (!geminiConfig.isConfigured()) {
@@ -39,10 +39,29 @@ public class GeminiClientService {
             return Optional.empty();
         }
 
+        List<String> candidateModels = List.of(
+                geminiConfig.getModel(),
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash-latest"
+        ).stream().distinct().toList();
+
+        for (String modelName : candidateModels) {
+            Optional<String> result = callGeminiApi(modelName, systemInstruction, userPrompt, history, jsonOutput);
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+
+        log.warn("Tất cả các mô hình Gemini đều không thể phản hồi yêu cầu.");
+        return Optional.empty();
+    }
+
+    private Optional<String> callGeminiApi(String modelName, String systemInstruction, String userPrompt, List<AiChatMessage> history, boolean jsonOutput) {
         try {
             String url = String.format("%s/models/%s:generateContent?key=%s",
                     geminiConfig.getBaseUrl().replaceAll("/+$", ""),
-                    geminiConfig.getModel(),
+                    modelName,
                     geminiConfig.getApiKey());
 
             ObjectNode root = objectMapper.createObjectNode();
@@ -74,7 +93,8 @@ public class GeminiClientService {
 
             // Generation Config
             ObjectNode genConfig = root.putObject("generationConfig");
-            genConfig.put("temperature", jsonOutput ? 0.1 : 0.4);
+            genConfig.put("temperature", jsonOutput ? 0.1 : 0.6);
+            genConfig.put("maxOutputTokens", 1200);
             if (jsonOutput) {
                 genConfig.put("responseMimeType", "application/json");
             }
@@ -108,10 +128,10 @@ public class GeminiClientService {
                     }
                 }
             } else {
-                log.warn("Gemini API trả về mã lỗi {}: {}", response.statusCode(), response.body());
+                log.warn("Gemini model {} trả về status {}: {}", modelName, response.statusCode(), response.body());
             }
         } catch (Exception e) {
-            log.error("Lỗi khi kết nối tới Google Gemini API: {}", e.getMessage());
+            log.error("Lỗi khi kết nối tới Gemini model {}: {}", modelName, e.getMessage());
         }
 
         return Optional.empty();
